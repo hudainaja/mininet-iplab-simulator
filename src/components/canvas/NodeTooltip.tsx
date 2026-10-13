@@ -27,7 +27,7 @@ export const NodeTooltip: React.FC<NodeTooltipProps> = ({ node }) => {
   if (hasTunnel) badges.push('6in4 SIT Tunnel');
 
   return (
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 select-none">
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-[9999] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 select-none">
       <div className="bg-white/98 backdrop-blur-md border border-slate-300 shadow-xl rounded-xl p-3 min-w-[210px] max-w-[260px] text-left text-xs text-slate-800 relative">
         {/* Header */}
         <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5 mb-2">

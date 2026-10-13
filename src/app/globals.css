@@ -31,3 +31,8 @@ body {
 .react-flow__pane:active {
   cursor: grabbing;
 }
+
+/* Ensure hovered nodes and their tooltips are stacked on top of everything */
+.react-flow__node:hover {
+  z-index: 9999 !important;
+}
