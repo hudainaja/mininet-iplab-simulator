@@ -5,13 +5,9 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   Node,
   Edge,
   Connection,
-  addEdge,
-  useNodesState,
-  useEdgesState,
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -57,9 +53,7 @@ export const NetworkCanvas: React.FC = () => {
     return links.map(link => ({
       id: link.id,
       source: link.source,
-      sourceHandle: link.sourceHandle,
       target: link.target,
-      targetHandle: link.targetHandle,
       type: 'custom',
       data: {
         sourceHandle: link.sourceHandle,
@@ -67,7 +61,6 @@ export const NetworkCanvas: React.FC = () => {
         status: link.status,
         latency: link.latency,
       },
-      animated: link.status === 'up',
     }));
   }, [links]);
 
@@ -90,7 +83,7 @@ export const NetworkCanvas: React.FC = () => {
   }, [addLink]);
 
   return (
-    <div className="w-full h-full relative bg-slate-950 overflow-hidden">
+    <div className="w-full h-full relative bg-slate-50 overflow-hidden">
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -103,28 +96,25 @@ export const NetworkCanvas: React.FC = () => {
           openTerminal(node.id);
         }}
         fitView
-        fitViewOptions={{ padding: 0.25 }}
+        fitViewOptions={{ padding: 0.2 }}
         minZoom={0.2}
         maxZoom={2.0}
         defaultEdgeOptions={{ type: 'custom' }}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color="#1e293b" />
-        <Controls className="!bg-slate-900/90 !border-slate-800 !text-slate-300 !fill-slate-300 shadow-xl rounded-xl overflow-hidden [&>button]:!border-slate-800" />
-        <MiniMap
-          nodeColor={(n) => {
-            if (n.type === 'router') return '#3b82f6';
-            if (n.type === 'switch') return '#a855f7';
-            return '#10b981';
-          }}
-          maskColor="rgba(15, 23, 42, 0.75)"
-          className="!bg-slate-900/90 !border !border-slate-800 !rounded-xl overflow-hidden shadow-2xl !bottom-4 !left-4"
+        {/* Subtle slate grid dots */}
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="#CBD5E1" />
+
+        {/* Clean Controls docked at bottom-left */}
+        <Controls
+          position="bottom-left"
+          className="bg-white border border-slate-300 shadow-sm rounded-md fill-slate-700 [&>button]:border-slate-200 [&>button]:fill-slate-700"
         />
       </ReactFlow>
 
-      {/* Floating Canvas Helper Info */}
-      <div className="absolute top-4 left-4 pointer-events-none select-none bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800/80 text-[11px] text-slate-400 flex items-center gap-2 shadow-lg">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+      {/* Floating Canvas Helper Info in Clean Light Theme */}
+      <div className="absolute top-3 left-3 pointer-events-none select-none bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-md border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2 shadow-xs">
+        <span className="w-2 h-2 rounded-full bg-emerald-500" />
         <span>Click node to open terminal • Hover links for interface mappings</span>
       </div>
     </div>

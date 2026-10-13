@@ -2,8 +2,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -19,7 +19,7 @@ body {
   overflow: hidden;
 }
 
-/* React Flow custom dark adjustments */
+/* React Flow adjustments */
 .react-flow__attribution {
   display: none !important;
 }

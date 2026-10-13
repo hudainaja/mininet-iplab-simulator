@@ -36,9 +36,9 @@ export const TerminalTabs: React.FC = () => {
   const getNodeIcon = (type: string) => {
     switch (type) {
       case 'router':
-        return <Server className="w-3.5 h-3.5 text-blue-400" />;
+        return <Server className="w-3.5 h-3.5 text-sky-400" />;
       case 'switch':
-        return <Network className="w-3.5 h-3.5 text-purple-400" />;
+        return <Network className="w-3.5 h-3.5 text-amber-400" />;
       case 'host':
         return <Laptop className="w-3.5 h-3.5 text-emerald-400" />;
       default:
@@ -47,7 +47,7 @@ export const TerminalTabs: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-between bg-slate-900 border-b border-slate-800 px-2 py-1 select-none">
+    <div className="flex items-center justify-between bg-slate-900 border-b border-slate-700 px-2 py-1 select-none">
       {/* Scrollable Tab List */}
       <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5">
         {openTerminalTabs.map(nodeId => {
@@ -59,10 +59,10 @@ export const TerminalTabs: React.FC = () => {
             <div
               key={nodeId}
               onClick={() => setActiveTerminal(nodeId)}
-              className={`group flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-mono transition-all duration-150 cursor-pointer border ${
+              className={`group flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-colors cursor-pointer border ${
                 isActive
-                  ? 'bg-slate-800 text-slate-100 border-slate-700 shadow-sm font-semibold'
-                  : 'bg-slate-950/40 text-slate-400 border-transparent hover:bg-slate-800/50 hover:text-slate-200'
+                  ? 'bg-slate-800 text-slate-100 border-slate-700 shadow-xs font-semibold'
+                  : 'bg-transparent text-slate-400 border-transparent hover:bg-slate-900 hover:text-slate-200'
               }`}
             >
               {getNodeIcon(node.type)}
@@ -85,13 +85,13 @@ export const TerminalTabs: React.FC = () => {
         {availableNodesToOpen.length > 0 && (
           <div className="relative group/add">
             <button
-              className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
               title="Open Node Terminal"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
-            <div className="absolute left-0 top-full mt-1 hidden group-hover/add:flex flex-col bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-1 z-50 min-w-[140px] max-h-56 overflow-y-auto">
-              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-800/80">
+            <div className="absolute left-0 top-full mt-1 hidden group-hover/add:flex flex-col bg-slate-900 border border-slate-800 rounded-lg shadow-xl py-1 z-50 min-w-[140px] max-h-56 overflow-y-auto">
+              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                 Open Terminal
               </div>
               {availableNodesToOpen.map(node => (
@@ -113,17 +113,17 @@ export const TerminalTabs: React.FC = () => {
       <div className="flex items-center gap-1 pl-2 border-l border-slate-800 shrink-0">
         <button
           onClick={() => setTerminalFontSize(-1)}
-          className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+          className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-850 transition-colors"
           title={`Zoom Out (${terminalFontSize}px)`}
         >
           <ZoomOut className="w-3.5 h-3.5" />
         </button>
-        <span className="text-[10px] font-mono text-slate-500 min-w-[20px] text-center">
+        <span className="text-[10px] font-mono text-slate-400 min-w-[20px] text-center">
           {terminalFontSize}
         </span>
         <button
           onClick={() => setTerminalFontSize(1)}
-          className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+          className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-850 transition-colors"
           title={`Zoom In (${terminalFontSize}px)`}
         >
           <ZoomIn className="w-3.5 h-3.5" />
@@ -133,7 +133,7 @@ export const TerminalTabs: React.FC = () => {
           onClick={() => {
             if (activeTerminalNodeId) clearTerminalBuffer(activeTerminalNodeId);
           }}
-          className="p-1 ml-1 rounded text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors"
+          className="p-1 ml-1 rounded text-slate-400 hover:text-amber-400 hover:bg-slate-850 transition-colors"
           title="Clear Buffer"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -141,7 +141,7 @@ export const TerminalTabs: React.FC = () => {
 
         <button
           onClick={toggleTerminalMaximize}
-          className="p-1 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
+          className="p-1 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-850 transition-colors"
           title={isTerminalMaximized ? "Restore Size" : "Maximize Terminal"}
         >
           {isTerminalMaximized ? (

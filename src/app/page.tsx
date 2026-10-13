@@ -19,9 +19,9 @@ export default function Home() {
 
   if (!mounted) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-950 text-slate-400 font-mono text-sm">
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 text-slate-600 font-mono text-sm">
         <div className="flex items-center gap-3">
-          <span className="w-3 h-3 rounded-full bg-blue-500 animate-ping" />
+          <span className="w-3 h-3 rounded-full bg-blue-600 animate-ping" />
           <span>Initializing Mininet-IPLab Virtual Topology & CLI Engine...</span>
         </div>
       </div>
@@ -29,7 +29,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950 font-sans">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 font-sans">
       {/* Top Navigation Bar */}
       <Navbar />
 
@@ -48,7 +48,7 @@ export default function Home() {
           className={`${
             isTerminalMaximized
               ? 'fixed inset-0 z-50'
-              : 'w-[480px] xl:w-[560px] h-full border-l border-slate-800 shrink-0'
+              : 'w-[480px] xl:w-[560px] h-full border-l border-slate-200 shrink-0'
           }`}
         >
           <TerminalWindow />

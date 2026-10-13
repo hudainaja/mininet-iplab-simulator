@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { getPrompt } from '../../engine/cliParser';
 import { TerminalTabs } from './TerminalTabs';
-import { Sparkles, Terminal as TerminalIcon } from 'lucide-react';
+import { Terminal as TerminalIcon } from 'lucide-react';
 
 export const TerminalWindow: React.FC = () => {
   const activeTerminalNodeId = useNetworkStore(state => state.activeTerminalNodeId);
@@ -123,10 +123,10 @@ export const TerminalWindow: React.FC = () => {
 
   if (!activeNode) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 font-mono text-sm p-4">
-        <TerminalIcon className="w-10 h-10 mb-3 opacity-30 text-blue-400" />
+      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-slate-400 font-mono text-sm p-4">
+        <TerminalIcon className="w-8 h-8 mb-2 opacity-40 text-slate-400" />
         <p>No active terminal selected.</p>
-        <p className="text-xs text-slate-600 mt-1">Click any node on the topology to open its console.</p>
+        <p className="text-xs text-slate-500 mt-1">Click any node on the topology to open its console.</p>
       </div>
     );
   }
@@ -162,7 +162,7 @@ export const TerminalWindow: React.FC = () => {
       ];
 
   return (
-    <div className={`w-full h-full flex flex-col bg-slate-950 text-slate-100 font-mono select-text ${
+    <div className={`w-full h-full flex flex-col bg-slate-900 border-l border-slate-700 text-slate-100 font-mono select-text ${
       isTerminalMaximized ? 'fixed inset-0 z-50 shadow-2xl' : ''
     }`}>
       {/* Top Tab Bar */}
@@ -173,18 +173,18 @@ export const TerminalWindow: React.FC = () => {
         ref={scrollRef}
         onClick={() => inputRef.current?.focus()}
         style={{ fontSize: `${terminalFontSize}px`, lineHeight: 1.5 }}
-        className="flex-1 p-3.5 overflow-y-auto space-y-1 bg-slate-950 cursor-text select-text scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent"
+        className="flex-1 p-3.5 overflow-y-auto space-y-1 bg-slate-900 cursor-text select-text scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent text-slate-100"
       >
         {activeNode.terminalBuffer.map((item, index) => {
-          let colorClass = 'text-slate-200';
+          let colorClass = 'text-slate-100';
           if (item.type === 'error' || item.text.startsWith('%')) {
             colorClass = 'text-rose-400 font-medium';
           } else if (item.type === 'success') {
-            colorClass = 'text-emerald-300';
+            colorClass = 'text-emerald-400';
           } else if (item.type === 'system') {
-            colorClass = 'text-sky-300 font-semibold';
+            colorClass = 'text-sky-300';
           } else if (item.type === 'banner') {
-            colorClass = 'text-slate-400 italic border-l-2 border-blue-500/50 pl-2 my-1';
+            colorClass = 'text-slate-400 italic border-l border-slate-600 pl-2 my-1';
           }
 
           return (
@@ -194,13 +194,13 @@ export const TerminalWindow: React.FC = () => {
           );
         })}
 
-        {/* Live Input Line */}
+        {/* Live Input Line with clear muted prompt colors */}
         <form onSubmit={handleSubmit} className="flex items-center gap-1.5 pt-1">
           <span className={`shrink-0 font-bold select-none ${
             activeNode.type === 'router'
-              ? 'text-blue-400'
+              ? 'text-sky-400'
               : activeNode.type === 'switch'
-              ? 'text-purple-400'
+              ? 'text-amber-400'
               : 'text-emerald-400'
           }`}>
             {prompt}
@@ -213,22 +213,19 @@ export const TerminalWindow: React.FC = () => {
             onKeyDown={handleKeyDown}
             spellCheck={false}
             autoComplete="off"
-            className="flex-1 bg-transparent text-slate-100 border-none outline-none font-mono caret-blue-400 p-0 m-0 text-inherit"
+            className="flex-1 bg-transparent text-slate-100 border-none outline-none font-mono caret-sky-400 p-0 m-0 text-inherit"
           />
         </form>
       </div>
 
-      {/* Quick Snippets Bar */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 border-t border-slate-800/80 overflow-x-auto scrollbar-none text-[11px]">
-        <div className="flex items-center gap-1 text-slate-500 text-[10px] uppercase font-bold shrink-0">
-          <Sparkles className="w-3 h-3 text-amber-400" />
-          <span>Quick:</span>
-        </div>
+      {/* Quick Action Snippets Bar (Slate pill buttons) */}
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border-t border-slate-700 overflow-x-auto scrollbar-none text-xs">
+        <span className="text-slate-500 text-[10px] uppercase font-bold shrink-0">Quick:</span>
         {quickSnippets.map((item, i) => (
           <button
             key={i}
             onClick={() => executeTerminalCommand(item.cmd)}
-            className="px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors shrink-0 font-mono border border-slate-700/60"
+            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors shrink-0 font-mono border border-slate-700 text-xs"
             title={`Run: ${item.cmd}`}
           >
             {item.label}
