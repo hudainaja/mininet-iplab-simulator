@@ -49,7 +49,7 @@ export const TerminalTabs: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-between bg-slate-900 border-b border-slate-700 px-2 py-1 select-none">
+    <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-950 border-b border-slate-700 dark:border-slate-800 px-2 py-1 select-none transition-colors">
       {/* Scrollable Tab List */}
       <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5">
         {openTerminalTabs.map(nodeId => {
@@ -63,8 +63,8 @@ export const TerminalTabs: React.FC = () => {
               onClick={() => setActiveTerminal(nodeId)}
               className={`group flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-colors cursor-pointer border ${
                 isActive
-                  ? 'bg-slate-800 text-slate-100 border-slate-700 shadow-xs font-semibold'
-                  : 'bg-transparent text-slate-400 border-transparent hover:bg-slate-900 hover:text-slate-200'
+                  ? 'bg-slate-800 dark:bg-slate-900 text-slate-100 border-slate-700 dark:border-slate-800 shadow-xs font-semibold'
+                  : 'bg-transparent text-slate-400 border-transparent hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-slate-200'
               }`}
             >
               {getNodeIcon(node.type)}
@@ -87,12 +87,12 @@ export const TerminalTabs: React.FC = () => {
         {availableNodesToOpen.length > 0 && (
           <div className="relative group/add">
             <button
-              className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-900 dark:bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
               title="Open Node Terminal"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
-            <div className="absolute left-0 top-full mt-1 hidden group-hover/add:flex flex-col bg-slate-900 border border-slate-800 rounded-lg shadow-xl py-1 z-50 min-w-[140px] max-h-56 overflow-y-auto">
+            <div className="absolute left-0 top-full mt-1 hidden group-hover/add:flex flex-col bg-slate-900 dark:bg-slate-950 border border-slate-800 rounded-lg shadow-xl py-1 z-50 min-w-[140px] max-h-56 overflow-y-auto">
               <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                 Open Terminal
               </div>

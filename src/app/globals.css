@@ -1,6 +1,8 @@
 @import "@xyflow/react/dist/style.css";
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -32,7 +34,12 @@ body {
   cursor: grabbing;
 }
 
-/* Ensure hovered nodes and their tooltips are stacked on top of everything */
-.react-flow__node:hover {
-  z-index: 9999 !important;
+/* Paksa node yang di-hover dan anaknya meloncat ke tumpukan z-index teratas */
+.react-flow__node:hover,
+.react-flow__node:focus-within {
+  z-index: 99999 !important;
+}
+
+.react-flow__node.selected {
+  z-index: 99990 !important;
 }

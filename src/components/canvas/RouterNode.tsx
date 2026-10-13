@@ -32,11 +32,19 @@ export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
       {/* Floating Hover Tooltip */}
       <NodeTooltip node={node} />
 
-      {/* Cardinal Handles for Link Connections */}
-      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-slate-400 !border-white hover:!bg-blue-600 transition-colors" />
-      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-slate-400 !border-white hover:!bg-blue-600 transition-colors" />
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-slate-400 !border-white hover:!bg-blue-600 transition-colors" />
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-slate-400 !border-white hover:!bg-blue-600 transition-colors" />
+      {/* Centered Connection Handles for Straight Cable Paths */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!w-1 !h-1 !opacity-0 !border-none !pointer-events-none"
+        style={{ top: isCore ? '26px' : '24px', left: '50%', transform: 'translate(-50%, -50%)' }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!w-1 !h-1 !opacity-0 !border-none !pointer-events-none"
+        style={{ top: isCore ? '26px' : '24px', left: '50%', transform: 'translate(-50%, -50%)' }}
+      />
 
       {/* Clean Circular Node (Core 52px, Edge 48px) */}
       <div
@@ -46,7 +54,7 @@ export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
             : 'w-12 h-12 bg-sky-500 border-2 border-sky-600'
         } ${
           isSelected
-            ? 'ring-3 ring-blue-500/60 ring-offset-2 ring-offset-slate-50'
+            ? 'ring-3 ring-blue-500/60 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900'
             : 'hover:shadow-md'
         }`}
       >
@@ -58,7 +66,7 @@ export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
       </div>
 
       {/* Node Name Label Below Circle */}
-      <div className="mt-2.5 text-xs font-semibold text-slate-800 bg-white/95 px-2 py-0.5 rounded shadow-xs border border-slate-200 tracking-tight select-none text-center whitespace-nowrap">
+      <div className="mt-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200 bg-white/95 dark:bg-slate-800/95 px-2 py-0.5 rounded shadow-xs border border-slate-200 dark:border-slate-700 tracking-tight select-none text-center whitespace-nowrap">
         {node.name}
       </div>
     </div>

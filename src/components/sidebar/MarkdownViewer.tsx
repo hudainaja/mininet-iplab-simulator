@@ -31,7 +31,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content }) => {
         parts.push(
           <code
             key={keyIdx++}
-            className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-[11px] border border-slate-200 font-medium"
+            className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-[11px] border border-slate-200 dark:border-slate-700 font-medium"
           >
             {codeMatch[1]}
           </code>
@@ -44,7 +44,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content }) => {
       const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
       if (boldMatch) {
         parts.push(
-          <strong key={keyIdx++} className="font-bold text-slate-900">
+          <strong key={keyIdx++} className="font-bold text-slate-900 dark:text-slate-100">
             {boldMatch[1]}
           </strong>
         );
@@ -176,14 +176,14 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content }) => {
   }
 
   return (
-    <div className="space-y-3 font-sans text-xs leading-relaxed text-slate-700 select-text">
+    <div className="space-y-3 font-sans text-xs leading-relaxed text-slate-700 dark:text-slate-300 select-text">
       {blocks.map((block, idx) => {
         switch (block.type) {
           case 'h1':
             return (
               <h1
                 key={idx}
-                className="text-base font-extrabold text-slate-900 border-b border-slate-200 pb-2 mb-2"
+                className="text-base font-extrabold text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2 mb-2"
               >
                 {block.content}
               </h1>
@@ -193,9 +193,9 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content }) => {
             return (
               <h3
                 key={idx}
-                className="text-xs font-bold uppercase tracking-wider text-slate-800 bg-slate-100/80 px-2 py-1 rounded-md mt-4 mb-2 border border-slate-200 flex items-center gap-1.5"
+                className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 bg-slate-100/80 dark:bg-slate-800/80 px-2 py-1 rounded-md mt-4 mb-2 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0" />
                 <span>{block.content}</span>
               </h3>
             );
@@ -204,18 +204,18 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content }) => {
             return (
               <h4
                 key={idx}
-                className="text-xs font-semibold text-blue-700 mt-3 mb-1 flex items-center gap-1"
+                className="text-xs font-semibold text-blue-700 dark:text-blue-400 mt-3 mb-1 flex items-center gap-1"
               >
                 {block.content}
               </h4>
             );
 
           case 'hr':
-            return <hr key={idx} className="border-slate-200 my-3" />;
+            return <hr key={idx} className="border-slate-200 dark:border-slate-800 my-3" />;
 
           case 'p':
             return (
-              <p key={idx} className="text-slate-600 leading-normal">
+              <p key={idx} className="text-slate-600 dark:text-slate-300 leading-normal">
                 {renderInline(block.content || '')}
               </p>
             );
@@ -224,8 +224,8 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content }) => {
             return (
               <ul key={idx} className="space-y-1.5 my-2 pl-1">
                 {block.items?.map((item, itemIdx) => (
-                  <li key={itemIdx} className="flex items-start gap-2 text-slate-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 shrink-0" />
+                  <li key={itemIdx} className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500 mt-1.5 shrink-0" />
                     <span className="leading-normal">{renderInline(item)}</span>
                   </li>
                 ))}
@@ -271,31 +271,31 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content }) => {
             return (
               <div
                 key={idx}
-                className="overflow-x-auto my-3 rounded-lg border border-slate-200 bg-white shadow-2xs"
+                className="overflow-x-auto my-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
               >
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
+                    <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800">
                       {block.tableData?.headers.map((h, hIdx) => (
                         <th
                           key={hIdx}
-                          className="px-2.5 py-1.5 font-semibold text-slate-700 text-[11px] uppercase tracking-wider"
+                          className="px-2.5 py-1.5 font-semibold text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider"
                         >
                           {h}
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {block.tableData?.rows.map((row, rIdx) => (
                       <tr
                         key={rIdx}
-                        className={rIdx % 2 === 0 ? 'bg-white hover:bg-slate-50/70' : 'bg-slate-50/40 hover:bg-slate-50'}
+                        className={rIdx % 2 === 0 ? 'bg-white dark:bg-slate-900 hover:bg-slate-50/70 dark:hover:bg-slate-800/50' : 'bg-slate-50/40 dark:bg-slate-850/40 hover:bg-slate-50 dark:hover:bg-slate-800'}
                       >
                         {row.map((cell, cIdx) => (
                           <td
                             key={cIdx}
-                            className="px-2.5 py-1.5 text-slate-700 text-[11px] font-mono align-top"
+                            className="px-2.5 py-1.5 text-slate-700 dark:text-slate-300 text-[11px] font-mono align-top"
                           >
                             {renderInline(cell)}
                           </td>

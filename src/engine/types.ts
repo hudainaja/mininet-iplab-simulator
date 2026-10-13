@@ -121,6 +121,8 @@ export interface NetworkLink {
   targetHandle: string;    // interface name e.g. "eth1"
   status: 'up' | 'down';
   latency: number;
+  type?: string;
+  style?: Record<string, any>;
 }
 
 export interface SimulationResult {

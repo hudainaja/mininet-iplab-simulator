@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, getStraightPath } from '@xyflow/react';
 
 interface CustomEdgeData {
   sourceHandle?: string;
@@ -16,22 +16,17 @@ export const CustomEdge: React.FC<EdgeProps> = ({
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
   style = {},
   markerEnd,
   data,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const [edgePath, labelX, labelY] = getStraightPath({
     sourceX,
     sourceY,
-    sourcePosition,
     targetX,
     targetY,
-    targetPosition,
-    borderRadius: 8,
   });
 
   const edgeData = (data || {}) as CustomEdgeData;
@@ -52,15 +47,16 @@ export const CustomEdge: React.FC<EdgeProps> = ({
         onMouseLeave={() => setIsHovered(false)}
       />
 
-      {/* Solid slate cable (slate-600 strokeWidth 2.5) */}
+      {/* Solid straight slate cable (stroke #64748b, strokeWidth 2) */}
       <BaseEdge
         id={id}
         path={edgePath}
         markerEnd={markerEnd}
+        className="react-flow__edge-path"
         style={{
           ...style,
-          stroke: isUp ? (isHovered ? '#1d4ed8' : '#475569') : '#dc2626',
-          strokeWidth: isHovered ? 3 : 2.5,
+          stroke: isUp ? (isHovered ? '#2563eb' : '#64748b') : '#dc2626',
+          strokeWidth: isHovered ? 3 : 2,
           transition: 'stroke 0.15s, stroke-width 0.15s',
         }}
       />

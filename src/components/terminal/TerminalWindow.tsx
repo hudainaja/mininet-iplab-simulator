@@ -123,7 +123,7 @@ export const TerminalWindow: React.FC = () => {
 
   if (!activeNode) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-slate-400 font-mono text-sm p-4">
+      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 dark:bg-slate-950 text-slate-400 font-mono text-sm p-4">
         <TerminalIcon className="w-8 h-8 mb-2 opacity-40 text-slate-400" />
         <p>No active terminal selected.</p>
         <p className="text-xs text-slate-500 mt-1">Click any node on the topology to open its console.</p>
@@ -162,7 +162,7 @@ export const TerminalWindow: React.FC = () => {
       ];
 
   return (
-    <div className={`w-full h-full flex flex-col bg-slate-900 border-l border-slate-700 text-slate-100 font-mono select-text ${
+    <div className={`w-full h-full flex flex-col bg-slate-900 dark:bg-slate-950 border-l border-slate-700 dark:border-slate-800 text-slate-100 font-mono select-text transition-colors ${
       isTerminalMaximized ? 'fixed inset-0 z-50 shadow-2xl' : ''
     }`}>
       {/* Top Tab Bar */}
@@ -173,7 +173,7 @@ export const TerminalWindow: React.FC = () => {
         ref={scrollRef}
         onClick={() => inputRef.current?.focus()}
         style={{ fontSize: `${terminalFontSize}px`, lineHeight: 1.5 }}
-        className="flex-1 p-3.5 overflow-y-auto space-y-1 bg-slate-900 cursor-text select-text scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent text-slate-100"
+        className="flex-1 p-3.5 overflow-y-auto space-y-1 bg-slate-900 dark:bg-slate-950 cursor-text select-text scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent text-slate-100"
       >
         {activeNode.terminalBuffer.map((item, index) => {
           let colorClass = 'text-slate-100';
@@ -219,13 +219,13 @@ export const TerminalWindow: React.FC = () => {
       </div>
 
       {/* Quick Action Snippets Bar (Slate pill buttons) */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border-t border-slate-700 overflow-x-auto scrollbar-none text-xs">
-        <span className="text-slate-500 text-[10px] uppercase font-bold shrink-0">Quick:</span>
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 dark:bg-slate-950 border-t border-slate-700 dark:border-slate-800 overflow-x-auto scrollbar-none text-xs">
+        <span className="text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold shrink-0">Quick:</span>
         {quickSnippets.map((item, i) => (
           <button
             key={i}
             onClick={() => executeTerminalCommand(item.cmd)}
-            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors shrink-0 font-mono border border-slate-700 text-xs"
+            className="px-2 py-0.5 rounded bg-slate-800 dark:bg-slate-900 hover:bg-slate-700 dark:hover:bg-slate-800 text-slate-300 hover:text-white transition-colors shrink-0 font-mono border border-slate-700 dark:border-slate-800 text-xs cursor-pointer"
             title={`Run: ${item.cmd}`}
           >
             {item.label}

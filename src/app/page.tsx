@@ -81,7 +81,7 @@ export default function Home() {
   }
 
   return (
-    <div className={`flex flex-col h-screen w-screen overflow-hidden bg-slate-50 font-sans ${
+    <div className={`flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans transition-colors ${
       isResizing ? 'select-none cursor-col-resize' : ''
     }`}>
       {/* Top Navigation Bar */}
@@ -102,7 +102,7 @@ export default function Home() {
               className="absolute -right-1 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-blue-500/30 transition-colors z-20 flex items-center justify-center group"
               title="Drag to resize sidebar"
             >
-              <div className="w-0.5 h-8 rounded-full bg-slate-300 group-hover:bg-blue-500 transition-colors" />
+              <div className="w-0.5 h-8 rounded-full bg-slate-300 dark:bg-slate-700 group-hover:bg-blue-500 transition-colors" />
             </div>
           </div>
         )}
@@ -116,9 +116,9 @@ export default function Home() {
             <button
               onClick={toggleSidebarCollapse}
               title="Expand Sidebar"
-              className="absolute top-3 left-3 z-30 px-2.5 py-1.5 bg-white/95 hover:bg-white text-slate-700 hover:text-slate-900 border border-slate-300 rounded-lg shadow-sm flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all hover:scale-105 active:scale-95"
+              className="absolute top-3 left-3 z-30 px-2.5 py-1.5 bg-white/95 dark:bg-slate-900/95 hover:bg-white dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all hover:scale-105 active:scale-95"
             >
-              <PanelLeftOpen className="w-3.5 h-3.5 text-blue-600" />
+              <PanelLeftOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>Sidebar</span>
             </button>
           )}
@@ -143,7 +143,7 @@ export default function Home() {
             className={`${
               isTerminalMaximized
                 ? 'fixed inset-0 z-50'
-                : 'h-full border-l border-slate-200 shrink-0 relative flex'
+                : 'h-full border-l border-slate-200 dark:border-slate-800 shrink-0 relative flex'
             }`}
           >
             {/* Drag Handle on left edge */}
@@ -153,7 +153,7 @@ export default function Home() {
                 className="absolute -left-1.5 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-blue-500/30 transition-colors z-20 flex items-center justify-center group"
                 title="Drag to resize terminal"
               >
-                <div className="w-0.5 h-8 rounded-full bg-slate-300 group-hover:bg-blue-500 transition-colors" />
+                <div className="w-0.5 h-8 rounded-full bg-slate-300 dark:bg-slate-700 group-hover:bg-blue-500 transition-colors" />
               </div>
             )}
             <TerminalWindow />

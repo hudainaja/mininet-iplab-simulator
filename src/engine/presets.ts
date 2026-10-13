@@ -175,7 +175,11 @@ export function createStaticRoutingPreset(): LabPreset {
     name: 'Static Routing Lab (4 Nodes)',
     description: 'h1 - r1 - r2 - h2 linear topology for static route and gateway practice.',
     nodes,
-    links
+    links: links.map(link => ({
+      ...link,
+      type: 'straight',
+      style: { stroke: '#64748b', strokeWidth: 2 }
+    }))
   };
 }
 
@@ -742,7 +746,11 @@ export function createUtpExamPreset(preconfigured: boolean = true): LabPreset {
     name: 'UTP Exam Topology (18 Nodes)',
     description: 'Symmetrical 18-node topology: 3 Core Routers triangle mesh, 3 OVS Switches, 6 Edge Routers, 6 Hosts with OSPF, iBGP, VLAN, and 6in4 SIT Tunnel.',
     nodes,
-    links
+    links: links.map(link => ({
+      ...link,
+      type: 'straight',
+      style: { stroke: '#64748b', strokeWidth: 2 }
+    }))
   };
 }
 

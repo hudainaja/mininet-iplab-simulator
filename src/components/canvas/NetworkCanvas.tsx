@@ -26,9 +26,11 @@ const nodeTypes = {
 
 const edgeTypes = {
   custom: CustomEdge,
+  straight: CustomEdge,
 };
 
 export const NetworkCanvas: React.FC = () => {
+  const isDarkMode = useNetworkStore(state => state.isDarkMode);
   const nodes = useNetworkStore(state => state.nodes);
   const links = useNetworkStore(state => state.links);
   const selectedNodeId = useNetworkStore(state => state.selectedNodeId);
@@ -49,13 +51,14 @@ export const NetworkCanvas: React.FC = () => {
     }));
   }, [nodes, selectedNodeId]);
 
-  // Convert zustand links to React Flow edges
+  // Convert zustand links to React Flow edges (Straight lines)
   const flowEdges: Edge[] = useMemo(() => {
     return links.map(link => ({
       id: link.id,
       source: link.source,
       target: link.target,
-      type: 'custom',
+      type: 'straight',
+      style: { stroke: '#64748b', strokeWidth: 2 },
       data: {
         sourceHandle: link.sourceHandle,
         targetHandle: link.targetHandle,
@@ -84,7 +87,7 @@ export const NetworkCanvas: React.FC = () => {
   }, [addLink]);
 
   return (
-    <div className="w-full h-full relative bg-slate-50 overflow-hidden">
+    <div className="w-full h-full relative overflow-hidden">
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -100,25 +103,36 @@ export const NetworkCanvas: React.FC = () => {
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.2}
         maxZoom={2.0}
-        defaultEdgeOptions={{ type: 'custom' }}
+        defaultEdgeOptions={{
+          type: 'straight',
+          style: { stroke: '#64748b', strokeWidth: 2 },
+        }}
         proOptions={{ hideAttribution: true }}
       >
-        {/* Subtle slate grid dots */}
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#CBD5E1" />
+        {/* Garis kisi-kisi grid nyata di latar belakang canvas (Hero Grid) */}
+        <Background
+          variant={BackgroundVariant.Lines}
+          gap={28}
+          size={1}
+          color={isDarkMode ? '#334155' : '#cbd5e1'}
+          className={isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}
+        />
 
         {/* Clean Controls docked at bottom-left */}
         <Controls
           position="bottom-left"
-          className="bg-white border border-slate-300 shadow-sm rounded-md fill-slate-700 [&>button]:border-slate-200 [&>button]:fill-slate-700"
+          className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 shadow-sm rounded-md fill-slate-700 dark:fill-slate-200 [&>button]:border-slate-200 dark:[&>button]:border-slate-700 [&>button]:fill-slate-700 dark:[&>button]:fill-slate-200"
         />
       </ReactFlow>
 
-      {/* Floating Canvas Helper Info in Clean Light Theme */}
-      <div className={`absolute top-3 ${
-        isSidebarCollapsed ? 'left-28' : 'left-3'
-      } pointer-events-none select-none bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-md border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2 shadow-xs transition-all`}>
+      {/* Floating Canvas Helper Info in Clean Theme */}
+      <div
+        className={`absolute top-3 ${
+          isSidebarCollapsed ? 'left-28' : 'left-3'
+        } pointer-events-none select-none bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-2 shadow-xs transition-all`}
+      >
         <span className="w-2 h-2 rounded-full bg-emerald-500" />
-        <span>Click node to open terminal • Hover links for interface mappings</span>
+        <span>Click node to open terminal • Straight-line topology mesh</span>
       </div>
     </div>
   );

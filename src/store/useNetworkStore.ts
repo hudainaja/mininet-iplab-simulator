@@ -35,6 +35,10 @@ interface NetworkState {
   isTerminalCollapsed: boolean;
   terminalWidth: number;
   
+  // Theme Mode
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+  
   // Modals
   isConfigModalOpen: boolean;
   isVerificationModalOpen: boolean;
@@ -92,9 +96,10 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
   terminalFontSize: 13,
   isTerminalMaximized: false,
   isSidebarCollapsed: false,
-  sidebarWidth: 280,
+  sidebarWidth: 300,
   isTerminalCollapsed: false,
   terminalWidth: 480,
+  isDarkMode: false,
 
   isConfigModalOpen: false,
   isVerificationModalOpen: false,
@@ -238,6 +243,14 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
   setTerminalWidth: (width: number) => {
     set({ terminalWidth: Math.max(350, Math.min(700, width)) });
   },
+
+  toggleDarkMode: () => set((state) => {
+    const next = !state.isDarkMode;
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', next);
+    }
+    return { isDarkMode: next };
+  }),
 
   setActiveSidebarTab: (tab: 'nodes' | 'guide' | 'palette') => {
     set({ activeSidebarTab: tab, isSidebarCollapsed: false });
