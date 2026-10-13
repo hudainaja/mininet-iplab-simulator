@@ -36,6 +36,7 @@ export const NetworkCanvas: React.FC = () => {
   const openTerminal = useNetworkStore(state => state.openTerminal);
   const updateNodePosition = useNetworkStore(state => state.updateNodePosition);
   const addLink = useNetworkStore(state => state.addLink);
+  const isSidebarCollapsed = useNetworkStore(state => state.isSidebarCollapsed);
 
   // Convert zustand nodes to React Flow nodes
   const flowNodes: Node[] = useMemo(() => {
@@ -103,7 +104,7 @@ export const NetworkCanvas: React.FC = () => {
         proOptions={{ hideAttribution: true }}
       >
         {/* Subtle slate grid dots */}
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="#CBD5E1" />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#CBD5E1" />
 
         {/* Clean Controls docked at bottom-left */}
         <Controls
@@ -113,7 +114,9 @@ export const NetworkCanvas: React.FC = () => {
       </ReactFlow>
 
       {/* Floating Canvas Helper Info in Clean Light Theme */}
-      <div className="absolute top-3 left-3 pointer-events-none select-none bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-md border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2 shadow-xs">
+      <div className={`absolute top-3 ${
+        isSidebarCollapsed ? 'left-28' : 'left-3'
+      } pointer-events-none select-none bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-md border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2 shadow-xs transition-all`}>
         <span className="w-2 h-2 rounded-full bg-emerald-500" />
         <span>Click node to open terminal • Hover links for interface mappings</span>
       </div>

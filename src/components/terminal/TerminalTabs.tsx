@@ -10,6 +10,7 @@ import {
   Trash2, 
   Maximize2, 
   Minimize2, 
+  ChevronRight,
   Terminal as TerminalIcon,
   Server,
   Network,
@@ -28,6 +29,7 @@ export const TerminalTabs: React.FC = () => {
   const terminalFontSize = useNetworkStore(state => state.terminalFontSize);
   const isTerminalMaximized = useNetworkStore(state => state.isTerminalMaximized);
   const toggleTerminalMaximize = useNetworkStore(state => state.toggleTerminalMaximize);
+  const toggleTerminalCollapse = useNetworkStore(state => state.toggleTerminalCollapse);
 
   const availableNodesToOpen = Object.values(nodes).filter(
     n => !openTerminalTabs.includes(n.id)
@@ -141,7 +143,7 @@ export const TerminalTabs: React.FC = () => {
 
         <button
           onClick={toggleTerminalMaximize}
-          className="p-1 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-850 transition-colors"
+          className="p-1 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
           title={isTerminalMaximized ? "Restore Size" : "Maximize Terminal"}
         >
           {isTerminalMaximized ? (
@@ -149,6 +151,14 @@ export const TerminalTabs: React.FC = () => {
           ) : (
             <Maximize2 className="w-3.5 h-3.5" />
           )}
+        </button>
+
+        <button
+          onClick={toggleTerminalCollapse}
+          className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+          title="Minimize Terminal Panel"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

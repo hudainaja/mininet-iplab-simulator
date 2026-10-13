@@ -4,6 +4,7 @@ import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { NetworkNode } from '../../engine/types';
 import { useNetworkStore } from '../../store/useNetworkStore';
+import { NodeTooltip } from './NodeTooltip';
 
 interface HostNodeProps {
   data: {
@@ -27,6 +28,9 @@ export const HostNode: React.FC<HostNodeProps> = ({ data, selected }) => {
       }}
       className="group relative flex flex-col items-center justify-center cursor-pointer select-none"
     >
+      {/* Floating Hover Tooltip */}
+      <NodeTooltip node={node} />
+
       {/* Cardinal Handles for Link Connections */}
       <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-slate-400 !border-white hover:!bg-emerald-600 transition-colors" />
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-slate-400 !border-white hover:!bg-emerald-600 transition-colors" />
@@ -40,7 +44,6 @@ export const HostNode: React.FC<HostNodeProps> = ({ data, selected }) => {
             ? 'ring-3 ring-emerald-500/60 ring-offset-2 ring-offset-slate-50'
             : 'hover:shadow-md'
         }`}
-        title={`${node.name} (Host PC) - Click to open terminal`}
       >
         {/* Host PC Desktop Workstation Icon */}
         <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" strokeWidth="0">
@@ -50,7 +53,7 @@ export const HostNode: React.FC<HostNodeProps> = ({ data, selected }) => {
       </div>
 
       {/* Node Name Label Below Square */}
-      <div className="text-slate-800 text-xs font-semibold mt-1 tracking-tight select-none text-center whitespace-nowrap">
+      <div className="mt-2.5 text-xs font-semibold text-slate-800 bg-white/95 px-2 py-0.5 rounded shadow-xs border border-slate-200 tracking-tight select-none text-center whitespace-nowrap">
         {node.name}
       </div>
     </div>

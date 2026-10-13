@@ -28,6 +28,12 @@ interface NetworkState {
   // Terminal Display Controls
   terminalFontSize: number;
   isTerminalMaximized: boolean;
+
+  // Resizable & Collapsible Panels
+  isSidebarCollapsed: boolean;
+  sidebarWidth: number;
+  isTerminalCollapsed: boolean;
+  terminalWidth: number;
   
   // Modals
   isConfigModalOpen: boolean;
@@ -45,6 +51,10 @@ interface NetworkState {
   clearTerminalBuffer: (nodeId: string) => void;
   setTerminalFontSize: (delta: number) => void;
   toggleTerminalMaximize: () => void;
+  toggleSidebarCollapse: () => void;
+  setSidebarWidth: (width: number) => void;
+  toggleTerminalCollapse: () => void;
+  setTerminalWidth: (width: number) => void;
   setActiveSidebarTab: (tab: 'nodes' | 'guide' | 'palette') => void;
   setSelectedGuide: (guideId: string) => void;
   setIsConfigModalOpen: (open: boolean) => void;
@@ -81,6 +91,11 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
 
   terminalFontSize: 13,
   isTerminalMaximized: false,
+  isSidebarCollapsed: false,
+  sidebarWidth: 280,
+  isTerminalCollapsed: false,
+  terminalWidth: 480,
+
   isConfigModalOpen: false,
   isVerificationModalOpen: false,
   verificationResults: [],
@@ -129,9 +144,13 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       set({
         openTerminalTabs: [...openTerminalTabs, nodeId],
         activeTerminalNodeId: nodeId,
+        isTerminalCollapsed: false,
       });
     } else {
-      set({ activeTerminalNodeId: nodeId });
+      set({ 
+        activeTerminalNodeId: nodeId,
+        isTerminalCollapsed: false,
+      });
     }
   },
 
@@ -204,8 +223,24 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
     set(state => ({ isTerminalMaximized: !state.isTerminalMaximized }));
   },
 
+  toggleSidebarCollapse: () => {
+    set(state => ({ isSidebarCollapsed: !state.isSidebarCollapsed }));
+  },
+
+  setSidebarWidth: (width: number) => {
+    set({ sidebarWidth: Math.max(240, Math.min(450, width)) });
+  },
+
+  toggleTerminalCollapse: () => {
+    set(state => ({ isTerminalCollapsed: !state.isTerminalCollapsed }));
+  },
+
+  setTerminalWidth: (width: number) => {
+    set({ terminalWidth: Math.max(350, Math.min(700, width)) });
+  },
+
   setActiveSidebarTab: (tab: 'nodes' | 'guide' | 'palette') => {
-    set({ activeSidebarTab: tab });
+    set({ activeSidebarTab: tab, isSidebarCollapsed: false });
   },
 
   setSelectedGuide: (guideId: string) => {

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { LAB_GUIDES } from '../../docs/labGuides';
+import { MarkdownViewer } from './MarkdownViewer';
 import { 
   Server, 
   Network, 
@@ -12,11 +13,13 @@ import {
   PlusCircle, 
   ChevronDown, 
   ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const activeSidebarTab = useNetworkStore(state => state.activeSidebarTab);
   const setActiveSidebarTab = useNetworkStore(state => state.setActiveSidebarTab);
+  const toggleSidebarCollapse = useNetworkStore(state => state.toggleSidebarCollapse);
   const nodes = useNetworkStore(state => state.nodes);
   const selectedNodeId = useNetworkStore(state => state.selectedNodeId);
   const selectNode = useNetworkStore(state => state.selectNode);
@@ -80,9 +83,9 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <div className="w-80 h-full flex flex-col bg-white border-r border-slate-200 select-none">
+    <div className="w-full h-full flex flex-col bg-white border-r border-slate-200 select-none overflow-hidden">
       {/* Sidebar Navigation Tabs */}
-      <div className="flex border-b border-slate-200 bg-slate-50/80 p-1.5 gap-1">
+      <div className="flex items-center border-b border-slate-200 bg-slate-50/80 p-1.5 gap-1">
         <button
           onClick={() => setActiveSidebarTab('nodes')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
@@ -120,6 +123,15 @@ export const Sidebar: React.FC = () => {
         >
           <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
           <span>Add Node</span>
+        </button>
+
+        {/* Collapse Sidebar Button */}
+        <button
+          onClick={toggleSidebarCollapse}
+          title="Collapse Sidebar"
+          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-md transition-colors shrink-0"
+        >
+          <ChevronLeft className="w-4 h-4" />
         </button>
       </div>
 
@@ -323,12 +335,8 @@ export const Sidebar: React.FC = () => {
           </div>
 
           {/* Guide Markdown Content */}
-          <div className="flex-1 overflow-y-auto p-4 text-xs text-slate-700 space-y-3 font-sans leading-relaxed select-text bg-white">
-            <div className="prose prose-slate max-w-none">
-              <pre className="whitespace-pre-wrap font-sans text-slate-700 text-xs leading-relaxed">
-                {selectedGuide.content}
-              </pre>
-            </div>
+          <div className="flex-1 overflow-y-auto p-4 select-text bg-white">
+            <MarkdownViewer content={selectedGuide.content} />
           </div>
         </div>
       )}

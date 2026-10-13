@@ -4,6 +4,7 @@ import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { NetworkNode } from '../../engine/types';
 import { useNetworkStore } from '../../store/useNetworkStore';
+import { NodeTooltip } from './NodeTooltip';
 
 interface RouterNodeProps {
   data: {
@@ -28,6 +29,9 @@ export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
       }}
       className="group relative flex flex-col items-center justify-center cursor-pointer select-none"
     >
+      {/* Floating Hover Tooltip */}
+      <NodeTooltip node={node} />
+
       {/* Cardinal Handles for Link Connections */}
       <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-slate-400 !border-white hover:!bg-blue-600 transition-colors" />
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-slate-400 !border-white hover:!bg-blue-600 transition-colors" />
@@ -45,7 +49,6 @@ export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
             ? 'ring-3 ring-blue-500/60 ring-offset-2 ring-offset-slate-50'
             : 'hover:shadow-md'
         }`}
-        title={`${node.name} (${isCore ? 'Core Router' : 'Edge Router'}) - Click to open terminal`}
       >
         {/* Classic Router 4-Arrow Icon */}
         <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" strokeWidth="0">
@@ -55,7 +58,7 @@ export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
       </div>
 
       {/* Node Name Label Below Circle */}
-      <div className="text-slate-800 text-xs font-semibold mt-1 tracking-tight select-none text-center whitespace-nowrap">
+      <div className="mt-2.5 text-xs font-semibold text-slate-800 bg-white/95 px-2 py-0.5 rounded shadow-xs border border-slate-200 tracking-tight select-none text-center whitespace-nowrap">
         {node.name}
       </div>
     </div>
