@@ -3,6 +3,15 @@ import { NetworkNode, NetworkLink } from '../engine/types';
 import { createUtpExamPreset, createStaticRoutingPreset, createBlankPreset, LabPreset } from '../engine/presets';
 import { executeCommand, getPrompt } from '../engine/cliParser';
 import { simulatePing } from '../engine/packetSimulator';
+import {
+  computeDynamicTopologyLayout,
+  checkAndAutoWireSubnets,
+  generateBulkTopology as generateBulk,
+  saveCustomPreset,
+  getCustomPresets,
+  deleteCustomPreset,
+  CustomLabPreset
+} from '../engine/dynamicLayoutEngine';
 
 interface VerificationResult {
   test: string;
@@ -17,14 +26,14 @@ interface NetworkState {
   currentPresetName: string;
   nodes: Record<string, NetworkNode>;
   links: NetworkLink[];
-  
+
   // UI Selection & Panels
   selectedNodeId: string | null;
   activeTerminalNodeId: string | null;
   openTerminalTabs: string[];
   activeSidebarTab: 'nodes' | 'guide' | 'palette';
   selectedGuideId: string;
-  
+
   // Terminal Display Controls
   terminalFontSize: number;
   isTerminalMaximized: boolean;
@@ -34,16 +43,30 @@ interface NetworkState {
   sidebarWidth: number;
   isTerminalCollapsed: boolean;
   terminalWidth: number;
-  
+
   // Theme Mode
   isDarkMode: boolean;
   toggleDarkMode: () => void;
-  
+
+  // Auto-Snap on CLI & Layout Engine
+  autoSnapOnCli: boolean;
+  toggleAutoSnapOnCli: () => void;
+  applyAutoLayout: () => void;
+
+  // Bulk Generator & Custom Presets
+  generateBulkTopology: (
+    architecture: 'enterprise' | 'spine-leaf' | 'mesh' | 'scattered',
+    nodeCount: number
+  ) => void;
+  saveCurrentAsPreset: (name: string, description?: string) => void;
+  loadCustomPreset: (presetId: string) => void;
+  deleteCustomPreset: (presetId: string) => void;
+
   // Modals
   isConfigModalOpen: boolean;
   isVerificationModalOpen: boolean;
   verificationResults: VerificationResult[];
-  
+
   // Actions
   loadPreset: (presetId: string) => void;
   resetLab: () => void;
@@ -63,18 +86,18 @@ interface NetworkState {
   setSelectedGuide: (guideId: string) => void;
   setIsConfigModalOpen: (open: boolean) => void;
   setIsVerificationModalOpen: (open: boolean) => void;
-  
+
   // Topology manipulation
   addNode: (node: NetworkNode) => void;
   removeNode: (nodeId: string) => void;
   addLink: (link: NetworkLink) => void;
   removeLink: (linkId: string) => void;
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
-  
+
   // Export / Import
   exportTopologyJson: () => string;
   importTopologyJson: (json: string) => boolean;
-  
+
   // Verification
   runVerificationCheck: () => void;
 }
@@ -101,11 +124,91 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
   terminalWidth: 480,
   isDarkMode: false,
 
+  autoSnapOnCli: true,
+
   isConfigModalOpen: false,
   isVerificationModalOpen: false,
   verificationResults: [],
 
+  toggleAutoSnapOnCli: () => {
+    set(state => ({ autoSnapOnCli: !state.autoSnapOnCli }));
+  },
+
+  applyAutoLayout: () => {
+    const { nodes, links } = get();
+    const clonedNodes = { ...nodes };
+    computeDynamicTopologyLayout(clonedNodes, links);
+    set({ nodes: clonedNodes });
+  },
+
+  generateBulkTopology: (architecture, nodeCount) => {
+    const generated = generateBulk(architecture, nodeCount);
+    const firstNodeId = Object.keys(generated.nodes)[0] || null;
+    const initialTabs = Object.keys(generated.nodes).slice(0, 4);
+
+    set({
+      currentPresetId: `bulk-${architecture}-${nodeCount}`,
+      currentPresetName: `${architecture.toUpperCase()} Topologi (${nodeCount} Nodes)`,
+      nodes: generated.nodes,
+      links: generated.links,
+      selectedNodeId: firstNodeId,
+      activeTerminalNodeId: firstNodeId,
+      openTerminalTabs: initialTabs,
+    });
+  },
+
+  saveCurrentAsPreset: (name: string, description?: string) => {
+    const { nodes, links } = get();
+    saveCustomPreset({
+      id: `custom-${Date.now()}`,
+      name,
+      description: description || `${Object.keys(nodes).length} Nodes`,
+      nodes,
+      links,
+    });
+  },
+
+  loadCustomPreset: (presetId: string) => {
+    const customs = getCustomPresets();
+    const found = customs.find(p => p.id === presetId);
+    if (found) {
+      const firstNodeId = Object.keys(found.nodes)[0] || null;
+      set({
+        currentPresetId: found.id,
+        currentPresetName: found.name,
+        nodes: found.nodes,
+        links: found.links,
+        selectedNodeId: firstNodeId,
+        activeTerminalNodeId: firstNodeId,
+        openTerminalTabs: Object.keys(found.nodes).slice(0, 4),
+      });
+    }
+  },
+
+  deleteCustomPreset: (presetId: string) => {
+    deleteCustomPreset(presetId);
+  },
+
   loadPreset: (presetId: string) => {
+    // Check if it's a custom preset
+    if (presetId.startsWith('custom-')) {
+      const customs = getCustomPresets();
+      const found = customs.find(p => p.id === presetId);
+      if (found) {
+        const firstNodeId = Object.keys(found.nodes)[0] || null;
+        set({
+          currentPresetId: found.id,
+          currentPresetName: found.name,
+          nodes: found.nodes,
+          links: found.links,
+          selectedNodeId: firstNodeId,
+          activeTerminalNodeId: firstNodeId,
+          openTerminalTabs: Object.keys(found.nodes).slice(0, 4),
+        });
+        return;
+      }
+    }
+
     let preset: LabPreset;
     if (presetId === 'static-routing-4') {
       preset = createStaticRoutingPreset();
@@ -152,7 +255,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         isTerminalCollapsed: false,
       });
     } else {
-      set({ 
+      set({
         activeTerminalNodeId: nodeId,
         isTerminalCollapsed: false,
       });
@@ -176,36 +279,100 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
     set({ activeTerminalNodeId: nodeId });
   },
 
-  executeTerminalCommand: (command: string) => {
-    const { activeTerminalNodeId, nodes, links } = get();
-    if (!activeTerminalNodeId || !nodes[activeTerminalNodeId]) return;
+  executeTerminalCommand: (commandInput: string) => {
+    const { activeTerminalNodeId, autoSnapOnCli } = get();
+    if (!activeTerminalNodeId || !get().nodes[activeTerminalNodeId]) return;
 
-    const node = { ...nodes[activeTerminalNodeId] };
-    const prompt = getPrompt(node);
+    // Split input on newlines to process paste and multi-line sequences synchronously
+    const rawLines = commandInput.split(/\r?\n/);
 
-    // Run command parser
-    const res = executeCommand(command, activeTerminalNodeId, nodes, links);
+    const workingNodes: Record<string, NetworkNode> = { ...get().nodes };
+    let workingLinks: NetworkLink[] = [...get().links];
 
-    if (res.clear) {
-      node.terminalBuffer = [];
-    } else {
-      // Append user command
-      node.terminalBuffer = [
-        ...node.terminalBuffer,
-        { text: `${prompt}${command}`, type: 'system' }
-      ];
+    // Deep clone active node to avoid stale mutations
+    let currentNode: NetworkNode = {
+      ...workingNodes[activeTerminalNodeId],
+      interfaces: { ...workingNodes[activeTerminalNodeId].interfaces },
+      staticRoutes: [...(workingNodes[activeTerminalNodeId].staticRoutes || [])],
+      terminalBuffer: [...workingNodes[activeTerminalNodeId].terminalBuffer],
+      commandHistory: [...workingNodes[activeTerminalNodeId].commandHistory],
+    };
+    workingNodes[activeTerminalNodeId] = currentNode;
 
-      // Append result if not empty
-      if (res.output) {
-        node.terminalBuffer.push({ text: res.output, type: res.type || 'output' });
+    for (const rawLine of rawLines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      const prompt = getPrompt(currentNode);
+
+      // Execute sequentially in the synchronous working state
+      const res = executeCommand(line, activeTerminalNodeId, workingNodes, workingLinks);
+
+      // Re-fetch currentNode in case workingNodes[activeTerminalNodeId] was re-assigned
+      currentNode = workingNodes[activeTerminalNodeId];
+
+      if (res.clear) {
+        currentNode.terminalBuffer = [];
+      } else {
+        currentNode.terminalBuffer.push({
+          text: `${prompt}${line}`,
+          type: 'system'
+        });
+
+        if (res.output) {
+          currentNode.terminalBuffer.push({
+            text: res.output,
+            type: res.type || 'output'
+          });
+        }
+      }
+
+      // Handle CLI connect command link creation
+      if (res.createdLink) {
+        const { sourceNodeId, sourceInterface, targetNodeId, targetInterface } = res.createdLink;
+        const linkId = `link-${sourceNodeId}-${sourceInterface}-${targetNodeId}-${targetInterface}`;
+        const alreadyExists = workingLinks.some(
+          l =>
+            (l.source === sourceNodeId &&
+              l.sourceHandle === sourceInterface &&
+              l.target === targetNodeId &&
+              l.targetHandle === targetInterface) ||
+            (l.source === targetNodeId &&
+              l.sourceHandle === targetInterface &&
+              l.target === sourceNodeId &&
+              l.targetHandle === sourceInterface)
+        );
+        if (!alreadyExists) {
+          workingLinks.push({
+            id: linkId,
+            source: sourceNodeId,
+            sourceHandle: sourceInterface,
+            target: targetNodeId,
+            targetHandle: targetInterface,
+            status: 'up',
+            latency: 0.3,
+            type: 'straight'
+          });
+        }
       }
     }
 
+    // Subnet IP Auto-Wiring:
+    // If an IP address was assigned to any interface, connect nodes in the same subnet
+    const autoWired = checkAndAutoWireSubnets(activeTerminalNodeId, workingNodes, workingLinks);
+    if (autoWired.length > 0) {
+      workingLinks = [...workingLinks, ...autoWired];
+    }
+
+    // Auto-Snap Position on CLI (if toggle is active)
+    if (autoSnapOnCli) {
+      computeDynamicTopologyLayout(workingNodes, workingLinks);
+    }
+
+    // Single synchronous Zustand commit!
     set({
-      nodes: {
-        ...nodes,
-        [activeTerminalNodeId]: node,
-      }
+      nodes: workingNodes,
+      links: workingLinks,
     });
   },
 
@@ -244,13 +411,14 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
     set({ terminalWidth: Math.max(350, Math.min(700, width)) });
   },
 
-  toggleDarkMode: () => set((state) => {
-    const next = !state.isDarkMode;
-    if (typeof document !== 'undefined') {
-      document.documentElement.classList.toggle('dark', next);
-    }
-    return { isDarkMode: next };
-  }),
+  toggleDarkMode: () =>
+    set(state => {
+      const next = !state.isDarkMode;
+      if (typeof document !== 'undefined') {
+        document.documentElement.classList.toggle('dark', next);
+      }
+      return { isDarkMode: next };
+    }),
 
   setActiveSidebarTab: (tab: 'nodes' | 'guide' | 'palette') => {
     set({ activeSidebarTab: tab, isSidebarCollapsed: false });
@@ -287,9 +455,8 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       );
 
       const newTabs = state.openTerminalTabs.filter(id => id !== nodeId);
-      const newActiveTerminal = state.activeTerminalNodeId === nodeId
-        ? (newTabs[0] || null)
-        : state.activeTerminalNodeId;
+      const newActiveTerminal =
+        state.activeTerminalNodeId === nodeId ? newTabs[0] || null : state.activeTerminalNodeId;
 
       return {
         nodes: newNodes,
@@ -328,7 +495,11 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
 
   exportTopologyJson: () => {
     const { nodes, links, currentPresetId, currentPresetName } = get();
-    return JSON.stringify({ presetId: currentPresetId, presetName: currentPresetName, nodes, links }, null, 2);
+    return JSON.stringify(
+      { presetId: currentPresetId, presetName: currentPresetName, nodes, links },
+      null,
+      2
+    );
   },
 
   importTopologyJson: (json: string) => {
@@ -363,7 +534,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       source: 'r1',
       target: '10.12.0.2',
       status: p1.success ? 'passed' : 'failed',
-      detail: p1.success ? `ICMP ping OK (${p1.rtt}ms)` : (p1.error || 'Failed'),
+      detail: p1.success ? `ICMP ping OK (${p1.rtt}ms)` : p1.error || 'Failed',
     });
 
     // Test 2: Core Router OSPF Adjacency r2 <-> r3
@@ -373,7 +544,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       source: 'r2',
       target: '10.23.0.2',
       status: p2.success ? 'passed' : 'failed',
-      detail: p2.success ? `ICMP ping OK (${p2.rtt}ms)` : (p2.error || 'Failed'),
+      detail: p2.success ? `ICMP ping OK (${p2.rtt}ms)` : p2.error || 'Failed',
     });
 
     // Test 3: Core Router OSPF Adjacency r1 <-> r3
@@ -383,7 +554,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       source: 'r1',
       target: '10.13.0.2',
       status: p3.success ? 'passed' : 'failed',
-      detail: p3.success ? `ICMP ping OK (${p3.rtt}ms)` : (p3.error || 'Failed'),
+      detail: p3.success ? `ICMP ping OK (${p3.rtt}ms)` : p3.error || 'Failed',
     });
 
     // Test 4: Host c11 to Gateway r11
@@ -394,7 +565,9 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         source: 'c11',
         target: '192.168.11.1',
         status: pHostGw.success ? 'passed' : 'failed',
-        detail: pHostGw.success ? `Ping to default GW OK (${pHostGw.rtt}ms)` : (pHostGw.error || 'Failed'),
+        detail: pHostGw.success
+          ? `Ping to default GW OK (${pHostGw.rtt}ms)`
+          : pHostGw.error || 'Failed',
       });
     }
 
@@ -406,7 +579,9 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         source: 'c11',
         target: '192.168.31.2',
         status: pCross.success ? 'passed' : 'failed',
-        detail: pCross.success ? `Full multi-hop routing succeeded (${pCross.rtt}ms, ${pCross.hops.length} hops)` : (pCross.error || 'Failed'),
+        detail: pCross.success
+          ? `Full multi-hop routing succeeded (${pCross.rtt}ms, ${pCross.hops.length} hops)`
+          : pCross.error || 'Failed',
       });
     }
 
@@ -418,7 +593,9 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         source: 'c11',
         target: '2001:db8:200::10',
         status: pV6.success ? 'passed' : 'failed',
-        detail: pV6.success ? `IPv6 over IPv4 SIT encapsulation active (${pV6.rtt}ms)` : (pV6.error || 'Check 6in4 tunnel routes'),
+        detail: pV6.success
+          ? `IPv6 over IPv4 SIT encapsulation active (${pV6.rtt}ms)`
+          : pV6.error || 'Check 6in4 tunnel routes',
       });
     }
 

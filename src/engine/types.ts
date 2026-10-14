@@ -7,7 +7,8 @@ export type CliMode =
   | 'config'             // r1(config)#
   | 'config-if'          // r1(config-if)#
   | 'config-router-ospf' // r1(config-router)#
-  | 'config-router-bgp'; // r1(config-router)#
+  | 'config-router-bgp'  // r1(config-router)#
+  | 'config-route-map';  // r1(config-route-map)#
 
 export interface InterfaceConfig {
   name: string;
@@ -17,6 +18,7 @@ export interface InterfaceConfig {
   up: boolean;
   ospfCost?: number;   // default 10
   vlanTag?: number;    // Open vSwitch port tag e.g. 10
+  description?: string;
   isTunnel?: boolean;
   tunnelConfig?: {
     mode: 'sit';
@@ -46,9 +48,36 @@ export interface BgpNeighbor {
   remoteAs: number;
   updateSource?: string;
   nextHopSelf?: boolean;
+  routeMapIn?: string;
+  routeMapOut?: string;
+  description?: string;
   state: 'Idle' | 'Connect' | 'Active' | 'OpenSent' | 'OpenConfirm' | 'Established';
   upDownTime?: string;
   prefixesReceived?: number;
+}
+
+export interface RouteMapClause {
+  match?: {
+    ipAddress?: string;
+    ipPrefixList?: string;
+  };
+  set?: {
+    localPreference?: number;
+    metric?: number;
+    asPathPrepend?: string;
+  };
+}
+
+export interface RouteMapEntry {
+  name: string;
+  action: 'permit' | 'deny';
+  sequence: number;
+  matchIpAddress?: string;
+  setLocalPref?: number;
+  setMetric?: number;
+  setAsPathPrepend?: string;
+  seq?: number;
+  clauses?: RouteMapClause;
 }
 
 export interface BgpRoute {
@@ -92,6 +121,12 @@ export interface NetworkNode {
   ospfEnabled: boolean;
   ospfRouterId?: string;
   ospfNetworks: OspfNetwork[];
+  passiveInterfaces?: string[];
+  redistributeOspf?: {
+    connected?: boolean;
+    static?: boolean;
+    bgp?: boolean;
+  };
   
   // BGP
   bgpEnabled: boolean;
@@ -99,14 +134,24 @@ export interface NetworkNode {
   bgpRouterId?: string;
   bgpNeighbors: Record<string, BgpNeighbor>;
   bgpNetworks: Array<{ network: string; prefix: number }>;
+  redistributeBgp?: {
+    connected?: boolean;
+    static?: boolean;
+    ospf?: boolean;
+  };
+
+  // Route-Maps
+  activeRouteMap?: { name: string; action: 'permit' | 'deny'; seq: number };
+  routeMaps?: Record<string, RouteMapEntry[]>;
 
   // Static Routing
   staticRoutes: Array<{ destination: string; prefix: number; nextHop: string; interfaceName?: string }>;
   
-  // IPv6
+  // IPv6 & Tunnels
   ipv6Routes: Array<{ destination: string; prefix: number; nextHop?: string; interfaceName?: string }>;
   defaultGateway?: string;
   defaultGatewayV6?: string;
+  tunnels?: Array<{ name: string; localIp: string; remoteIp: string; ttl: number }>;
 
   // Terminal & Shell State
   commandHistory: string[];

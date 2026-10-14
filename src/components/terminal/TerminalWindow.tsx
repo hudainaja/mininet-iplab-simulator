@@ -43,6 +43,16 @@ export const TerminalWindow: React.FC = () => {
     setHistoryIndex(null);
   }, [activeNode, executeTerminalCommand, inputVal]);
 
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text');
+    if (text && text.includes('\n')) {
+      e.preventDefault();
+      executeTerminalCommand(text);
+      setInputVal('');
+      setHistoryIndex(null);
+    }
+  }, [executeTerminalCommand]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!activeNode) return;
 
@@ -211,6 +221,7 @@ export const TerminalWindow: React.FC = () => {
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             spellCheck={false}
             autoComplete="off"
             className="flex-1 bg-transparent text-slate-100 border-none outline-none font-mono caret-sky-400 p-0 m-0 text-inherit"

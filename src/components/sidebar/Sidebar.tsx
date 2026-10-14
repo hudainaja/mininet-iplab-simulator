@@ -14,6 +14,12 @@ import {
   ChevronDown, 
   ChevronRight,
   ChevronLeft,
+  Wand2,
+  Sparkles,
+  Save,
+  RefreshCw,
+  Sliders,
+  Check,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -28,6 +34,13 @@ export const Sidebar: React.FC = () => {
   const setSelectedGuide = useNetworkStore(state => state.setSelectedGuide);
   const addNode = useNetworkStore(state => state.addNode);
 
+  // Layout Engine & Preset actions
+  const autoSnapOnCli = useNetworkStore(state => state.autoSnapOnCli);
+  const toggleAutoSnapOnCli = useNetworkStore(state => state.toggleAutoSnapOnCli);
+  const applyAutoLayout = useNetworkStore(state => state.applyAutoLayout);
+  const generateBulkTopology = useNetworkStore(state => state.generateBulkTopology);
+  const saveCurrentAsPreset = useNetworkStore(state => state.saveCurrentAsPreset);
+
   // Accordion state
   const [coreOpen, setCoreOpen] = useState(true);
   const [edgeOpen, setEdgeOpen] = useState(true);
@@ -38,6 +51,12 @@ export const Sidebar: React.FC = () => {
   const [newNodeName, setNewNodeName] = useState('');
   const [newNodeType, setNewNodeType] = useState<'router' | 'switch' | 'host'>('router');
   const [newNodeRole, setNewNodeRole] = useState<'core' | 'edge'>('core');
+
+  // Bulk Generator Form State
+  const [bulkArch, setBulkArch] = useState<'enterprise' | 'spine-leaf' | 'mesh' | 'scattered'>('enterprise');
+  const [bulkCount, setBulkCount] = useState<number>(30);
+  const [customPresetName, setCustomPresetName] = useState<string>('');
+  const [presetSavedToast, setPresetSavedToast] = useState<boolean>(false);
 
   const coreRouters = Object.values(nodes).filter(n => n.type === 'router' && n.role === 'core');
   const edgeRouters = Object.values(nodes).filter(n => n.type === 'router' && n.role !== 'core');
@@ -341,12 +360,14 @@ export const Sidebar: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: Custom Node Palette */}
+      {/* Tab 3: Custom Node Palette & Bulk Generator */}
       {activeSidebarTab === 'palette' && (
         <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
+          {/* Section 1: Single Node Placement */}
           <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800">
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2.5">
-              Add New Node
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+              <span>Add Single Node</span>
+              <span className="text-[10px] text-slate-500 font-normal">Custom Placed</span>
             </h4>
             <form onSubmit={handleAddNodeSubmit} className="space-y-3 text-xs">
               <div>
@@ -436,6 +457,138 @@ export const Sidebar: React.FC = () => {
                 Place on Canvas
               </button>
             </form>
+          </div>
+
+          {/* Section 2: Bulk Topology Generator (Skala Besar) */}
+          <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-lg border border-blue-200 dark:border-blue-900/50">
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                Bulk Generator (10–100 Nodes)
+              </h4>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-600 dark:text-slate-400 mb-1 font-medium">Arsitektur Topologi</label>
+                <select
+                  value={bulkArch}
+                  onChange={(e) => setBulkArch(e.target.value as any)}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 py-1.5 text-slate-800 dark:text-slate-200 outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="enterprise">Hierarchical Enterprise (Core-Switch-Edge-Host)</option>
+                  <option value="spine-leaf">Spine-Leaf Data Center</option>
+                  <option value="mesh">Full-Mesh / Ring Backbone</option>
+                  <option value="scattered">Scattered Blank Canvas (Unwired Nodes)</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-600 dark:text-slate-400 font-medium">Jumlah Total Node</label>
+                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800 text-[11px]">
+                    {bulkCount} Nodes
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  step={5}
+                  value={bulkCount}
+                  onChange={(e) => setBulkCount(parseInt(e.target.value, 10))}
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                  <span>10</span>
+                  <span>30</span>
+                  <span>50</span>
+                  <span>75</span>
+                  <span>100</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => generateBulkTopology(bulkArch, bulkCount)}
+                className="w-full flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-md shadow-xs transition-all cursor-pointer"
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+                <span>Generate Topologi ({bulkCount} Nodes)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Section 3: Dynamic Canvas Engine & Auto-Wiring Controls */}
+          <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs space-y-2.5">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-slate-500" />
+              <span>Canvas & Auto-Wiring</span>
+            </h4>
+
+            {/* Auto-Snap on CLI Toggle */}
+            <div className="flex items-center justify-between p-2 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <div>
+                <div className="font-medium text-slate-800 dark:text-slate-200">Auto-Snap on CLI</div>
+                <div className="text-[10px] text-slate-500">Auto-wire subnet & rapikan posisi node saat konfigurasi</div>
+              </div>
+              <button
+                type="button"
+                onClick={toggleAutoSnapOnCli}
+                className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${
+                  autoSnapOnCli ? 'bg-blue-600 justify-end' : 'bg-slate-300 dark:bg-slate-600 justify-start'
+                }`}
+              >
+                <div className="w-4 h-4 rounded-full bg-white shadow-xs" />
+              </button>
+            </div>
+
+            {/* Rearrange / Auto-Layout Button */}
+            <button
+              type="button"
+              onClick={applyAutoLayout}
+              className="w-full flex items-center justify-center gap-2 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-medium rounded-md transition-colors cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+              <span>Rapikan Kanvas (Dynamic Auto-Layout)</span>
+            </button>
+          </div>
+
+          {/* Section 4: Save as Custom Preset */}
+          <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs space-y-2.5">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <Save className="w-3.5 h-3.5 text-slate-500" />
+              <span>Save as Custom Preset</span>
+            </h4>
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                placeholder="Nama Preset Kustom..."
+                value={customPresetName}
+                onChange={(e) => setCustomPresetName(e.target.value)}
+                className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 py-1.5 text-slate-800 dark:text-slate-200 outline-none focus:border-blue-500 text-xs"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const name = customPresetName.trim() || `Topology ${Object.keys(nodes).length} Nodes`;
+                  saveCurrentAsPreset(name);
+                  setCustomPresetName('');
+                  setPresetSavedToast(true);
+                  setTimeout(() => setPresetSavedToast(false), 3000);
+                }}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md shadow-xs transition-colors shrink-0 cursor-pointer"
+              >
+                Save
+              </button>
+            </div>
+
+            {presetSavedToast && (
+              <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 p-1.5 rounded border border-emerald-200 dark:border-emerald-800">
+                <Check className="w-3.5 h-3.5 shrink-0" />
+                <span>Topologi berhasil disimpan ke Custom Preset!</span>
+              </div>
+            )}
           </div>
 
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1.5 leading-relaxed">

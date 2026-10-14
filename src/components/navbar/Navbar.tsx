@@ -13,7 +13,9 @@ import {
   Layers,
   Sun,
   Moon,
+  Trash2,
 } from 'lucide-react';
+import { getCustomPresets, deleteCustomPreset } from '../../engine/dynamicLayoutEngine';
 
 export const Navbar: React.FC = () => {
   const isDarkMode = useNetworkStore(state => state.isDarkMode);
@@ -122,6 +124,52 @@ export const Navbar: React.FC = () => {
                   <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">{p.desc}</div>
                 </button>
               ))}
+
+              {(() => {
+                const customPresets = getCustomPresets();
+                if (customPresets.length === 0) return null;
+                return (
+                  <>
+                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 border-t border-slate-100 dark:border-slate-800 mt-1.5">
+                      Saved Custom Presets
+                    </div>
+                    {customPresets.map(cp => (
+                      <div
+                        key={cp.id}
+                        className={`flex items-center justify-between px-3 py-1.5 rounded-md my-0.5 transition-colors ${
+                          currentPresetId === cp.id
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <button
+                          onClick={() => {
+                            loadPreset(cp.id);
+                            setPresetDropdownOpen(false);
+                          }}
+                          className="text-left text-xs flex-1 truncate cursor-pointer mr-2"
+                        >
+                          <div className="font-medium truncate">{cp.name}</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+                            {cp.description || `${Object.keys(cp.nodes).length} Nodes`}
+                          </div>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteCustomPreset(cp.id);
+                            setPresetDropdownOpen(false);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-500 rounded transition-colors cursor-pointer"
+                          title="Hapus Preset Kustom"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>

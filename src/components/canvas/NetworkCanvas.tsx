@@ -112,10 +112,10 @@ export const NetworkCanvas: React.FC = () => {
         {/* Garis kisi-kisi grid nyata di latar belakang canvas (Hero Grid) */}
         <Background
           variant={BackgroundVariant.Lines}
-          gap={28}
+          gap={32}
           size={1}
-          color={isDarkMode ? '#334155' : '#cbd5e1'}
-          className={isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}
+          color={isDarkMode ? '#1e293b' : '#cbd5e1'}
+          className={isDarkMode ? 'bg-[#090d16]' : 'bg-[#f8fafc]'}
         />
 
         {/* Clean Controls docked at bottom-left */}
