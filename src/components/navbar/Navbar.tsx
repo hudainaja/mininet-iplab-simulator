@@ -14,6 +14,8 @@ import {
   Sun,
   Moon,
   Trash2,
+  Cable,
+  RefreshCw,
 } from 'lucide-react';
 import { getCustomPresets, deleteCustomPreset } from '../../engine/dynamicLayoutEngine';
 
@@ -29,8 +31,22 @@ export const Navbar: React.FC = () => {
   const setIsConfigModalOpen = useNetworkStore(state => state.setIsConfigModalOpen);
   const runVerificationCheck = useNetworkStore(state => state.runVerificationCheck);
   const setActiveSidebarTab = useNetworkStore(state => state.setActiveSidebarTab);
+  
+  // Wiring mode & Sync
+  const isWiringMode = useNetworkStore(state => state.isWiringMode);
+  const toggleWiringMode = useNetworkStore(state => state.toggleWiringMode);
+  const syncNetworkStatus = useNetworkStore(state => state.syncNetworkStatus);
 
   const [presetDropdownOpen, setPresetDropdownOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncClick = () => {
+    setIsSyncing(true);
+    syncNetworkStatus();
+    setTimeout(() => {
+      setIsSyncing(false);
+    }, 600);
+  };
 
   const presets = [
     { id: 'utp-exam-18', name: 'UTP Exam Topology (18 Nodes)', desc: '3 Core Routers triangle mesh, 3 Switches, 6 Edge Routers, 6 Hosts' },
@@ -58,7 +74,7 @@ export const Navbar: React.FC = () => {
         </div>
 
         {/* Separator */}
-        <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden md:block" />
+        <div className="h-6 w-px bg-slate-200 dark:border-slate-800 mx-1 hidden md:block" />
 
         {/* Status Indicators */}
         <div className="hidden lg:flex items-center gap-2 text-xs">
@@ -92,6 +108,30 @@ export const Navbar: React.FC = () => {
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2">
+        {/* Mode Tarik Kabel Toggle */}
+        <button
+          onClick={toggleWiringMode}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer border ${
+            isWiringMode
+              ? 'bg-blue-600 border-blue-700 text-white shadow-xs'
+              : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+          }`}
+          title="Mode Tarik Kabel (Tombol Pintas: W)"
+        >
+          <Cable className={`w-3.5 h-3.5 ${isWiringMode ? 'animate-pulse text-amber-300' : 'text-blue-600 dark:text-blue-400'}`} />
+          <span className="hidden sm:inline">{isWiringMode ? 'Wiring Mode (On)' : 'Tarik Kabel'}</span>
+        </button>
+
+        {/* Sync Status Button */}
+        <button
+          onClick={handleSyncClick}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-md border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+          title="Sinkronisasi Status Jaringan: Memperbarui garis kabel visual sesuai status antarmuka Mininet (UP/DOWN)"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
+          <span className="hidden md:inline">Sync Status</span>
+        </button>
+
         {/* Preset Selector Dropdown */}
         <div className="relative">
           <button

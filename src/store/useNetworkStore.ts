@@ -67,6 +67,18 @@ interface NetworkState {
   isVerificationModalOpen: boolean;
   verificationResults: VerificationResult[];
 
+  // Wiring Mode & Quick Connect
+  isWiringMode: boolean;
+  wiringSourceNodeId: string | null;
+  toggleWiringMode: () => void;
+  setWiringMode: (active: boolean) => void;
+  setWiringSourceNodeId: (nodeId: string | null) => void;
+  connectNodes: (sourceId: string, targetId: string) => boolean;
+
+  // Network Status Synchronization
+  lastSyncMessage: string | null;
+  syncNetworkStatus: () => { activeLinks: number; downLinks: number; message: string };
+
   // Actions
   loadPreset: (presetId: string) => void;
   resetLab: () => void;
@@ -102,6 +114,105 @@ interface NetworkState {
   runVerificationCheck: () => void;
 }
 
+// Smart auto-increment node naming: finds the smallest unused positive integer (h1, h2..., s1, s2..., r1, r2...)
+export function getNextAvailableNodeName(
+  type: 'router' | 'switch' | 'host',
+  nodes: Record<string, NetworkNode>
+): string {
+  const prefix = type === 'host' ? 'h' : type === 'switch' ? 's' : 'r';
+
+  // Collect all taken IDs and names in lowercase
+  const takenNames = new Set<string>();
+  for (const n of Object.values(nodes)) {
+    if (n.id) takenNames.add(n.id.toLowerCase());
+    if (n.name) takenNames.add(n.name.toLowerCase());
+  }
+
+  // Find the smallest positive integer i >= 1 such that `${prefix}${i}` is NOT taken
+  let i = 1;
+  while (takenNames.has(`${prefix}${i}`)) {
+    i++;
+  }
+
+  return `${prefix}${i}`;
+}
+
+// Helper to allocate an interface name for a node in Mininet convention
+function allocateInterfaceForNode(
+  node: NetworkNode,
+  links: NetworkLink[],
+  preferredName?: string
+): string {
+  // If preferredName is provided, valid, and not generic handle id or default "eth1"
+  if (
+    preferredName &&
+    preferredName !== 'eth1' &&
+    !preferredName.startsWith('source-') &&
+    !preferredName.startsWith('target-') &&
+    !preferredName.startsWith('top') &&
+    !preferredName.startsWith('bottom') &&
+    !preferredName.startsWith('left') &&
+    !preferredName.startsWith('right')
+  ) {
+    return preferredName;
+  }
+
+  // Collect all interface names currently connected on this node
+  const usedIntfs = new Set<string>();
+  for (const l of links) {
+    if (l.source === node.id && l.sourceHandle) usedIntfs.add(l.sourceHandle.toLowerCase());
+    if (l.target === node.id && l.targetHandle) usedIntfs.add(l.targetHandle.toLowerCase());
+  }
+
+  // 1. Look for an existing, unused non-loopback interface on the node
+  for (const [intfName, intf] of Object.entries(node.interfaces)) {
+    if (intfName === 'lo' || intf.isTunnel) continue;
+    if (!usedIntfs.has(intfName.toLowerCase())) {
+      return intfName;
+    }
+  }
+
+  // 2. Generate new sequential interface name
+  // Standard Mininet naming convention:
+  // For switches: s1-eth1, s1-eth2, etc. (starts at 1)
+  // For hosts and routers: <nodeName>-eth0, <nodeName>-eth1, etc.
+  const prefix = `${node.name}-eth`;
+  const startIndex = node.type === 'switch' ? 1 : 0;
+
+  for (let i = startIndex; i < 64; i++) {
+    const candidate = `${prefix}${i}`;
+    const altCandidate = `eth${i}`;
+    if (
+      !node.interfaces[candidate] &&
+      !node.interfaces[altCandidate] &&
+      !usedIntfs.has(candidate.toLowerCase()) &&
+      !usedIntfs.has(altCandidate.toLowerCase())
+    ) {
+      return candidate;
+    }
+  }
+
+  return `${prefix}${Date.now().toString().slice(-3)}`;
+}
+
+// Ensure a virtual interface is registered in the node's interfaces dictionary
+function ensureInterfaceRegistered(node: NetworkNode, intfName: string) {
+  if (!node.interfaces[intfName]) {
+    const randHex = Math.floor(Math.random() * 89 + 10);
+    const randId = Math.floor(Math.random() * 89 + 10);
+    node.interfaces[intfName] = {
+      name: intfName,
+      mac: `00:00:${randHex}:01:00:${randId}`,
+      up: true,
+      ospfCost: node.type === 'router' ? 10 : undefined,
+      vlanTag: node.type === 'switch' ? 1 : undefined,
+    };
+  } else {
+    // If it already existed, make sure administrative state is UP
+    node.interfaces[intfName].up = true;
+  }
+}
+
 const defaultPreset = createUtpExamPreset(true);
 
 export const useNetworkStore = create<NetworkState>((set, get) => ({
@@ -123,6 +234,26 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
   isTerminalCollapsed: false,
   terminalWidth: 480,
   isDarkMode: false,
+
+  // Wiring Mode & Quick Connect
+  isWiringMode: false,
+  wiringSourceNodeId: null,
+  lastSyncMessage: null,
+
+  toggleWiringMode: () => {
+    set(state => ({
+      isWiringMode: !state.isWiringMode,
+      wiringSourceNodeId: null,
+    }));
+  },
+
+  setWiringMode: (active: boolean) => {
+    set({ isWiringMode: active, wiringSourceNodeId: null });
+  },
+
+  setWiringSourceNodeId: (nodeId: string | null) => {
+    set({ wiringSourceNodeId: nodeId });
+  },
 
   autoSnapOnCli: true,
 
@@ -369,6 +500,24 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       computeDynamicTopologyLayout(workingNodes, workingLinks);
     }
 
+    // Synchronize link UP/DOWN state with interface status in real-time
+    for (let i = 0; i < workingLinks.length; i++) {
+      const l = workingLinks[i];
+      const sNode = workingNodes[l.source];
+      const tNode = workingNodes[l.target];
+      if (sNode && tNode) {
+        const sIntf = sNode.interfaces[l.sourceHandle];
+        const tIntf = tNode.interfaces[l.targetHandle];
+        if (sIntf && tIntf) {
+          const isDown = sIntf.up === false || tIntf.up === false;
+          workingLinks[i] = {
+            ...l,
+            status: isDown ? 'down' : 'up'
+          };
+        }
+      }
+    }
+
     // Single synchronous Zustand commit!
     set({
       nodes: workingNodes,
@@ -468,16 +617,226 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
     });
   },
 
+  connectNodes: (sourceId: string, targetId: string) => {
+    if (sourceId === targetId) return false;
+    const { nodes, links } = get();
+    const sourceNode = nodes[sourceId];
+    const targetNode = nodes[targetId];
+    if (!sourceNode || !targetNode) return false;
+
+    // Check if link already exists between these two nodes
+    const alreadyExists = links.some(
+      l =>
+        (l.source === sourceId && l.target === targetId) ||
+        (l.source === targetId && l.target === sourceId)
+    );
+    if (alreadyExists) return false;
+
+    const updatedNodes = {
+      ...nodes,
+      [sourceId]: {
+        ...sourceNode,
+        interfaces: { ...sourceNode.interfaces },
+        terminalBuffer: [...sourceNode.terminalBuffer],
+      },
+      [targetId]: {
+        ...targetNode,
+        interfaces: { ...targetNode.interfaces },
+        terminalBuffer: [...targetNode.terminalBuffer],
+      },
+    };
+
+    const sNode = updatedNodes[sourceId];
+    const tNode = updatedNodes[targetId];
+
+    const sourceIntf = allocateInterfaceForNode(sNode, links);
+    const targetIntf = allocateInterfaceForNode(tNode, links);
+
+    ensureInterfaceRegistered(sNode, sourceIntf);
+    ensureInterfaceRegistered(tNode, targetIntf);
+
+    sNode.terminalBuffer.push({
+      text: `[LINK UP] Port ${sourceIntf} connected to ${targetNode.name}:${targetIntf}`,
+      type: 'success',
+    });
+    tNode.terminalBuffer.push({
+      text: `[LINK UP] Port ${targetIntf} connected to ${sourceNode.name}:${sourceIntf}`,
+      type: 'success',
+    });
+
+    const newLink: NetworkLink = {
+      id: `link-${sourceId}-${targetId}-${Date.now().toString().slice(-4)}`,
+      source: sourceId,
+      sourceHandle: sourceIntf,
+      target: targetId,
+      targetHandle: targetIntf,
+      status: 'up',
+      latency: 0.3,
+      type: 'straight',
+      style: { stroke: '#64748b', strokeWidth: 2 },
+    };
+
+    set({
+      nodes: updatedNodes,
+      links: [...links, newLink],
+    });
+
+    return true;
+  },
+
+  syncNetworkStatus: () => {
+    const { nodes, links } = get();
+    const updatedNodes: Record<string, NetworkNode> = {};
+    for (const [id, n] of Object.entries(nodes)) {
+      updatedNodes[id] = {
+        ...n,
+        interfaces: { ...n.interfaces },
+      };
+    }
+
+    const updatedLinks: NetworkLink[] = [];
+    let activeCount = 0;
+    let downCount = 0;
+
+    for (const link of links) {
+      const sNode = updatedNodes[link.source];
+      const tNode = updatedNodes[link.target];
+
+      // Prune orphan links if either node is deleted
+      if (!sNode || !tNode) continue;
+
+      // Ensure interfaces exist
+      let sIntf = sNode.interfaces[link.sourceHandle];
+      if (!sIntf) {
+        ensureInterfaceRegistered(sNode, link.sourceHandle);
+        sIntf = sNode.interfaces[link.sourceHandle];
+      }
+
+      let tIntf = tNode.interfaces[link.targetHandle];
+      if (!tIntf) {
+        ensureInterfaceRegistered(tNode, link.targetHandle);
+        tIntf = tNode.interfaces[link.targetHandle];
+      }
+
+      // Determine UP/DOWN status based on interfaces
+      const isDown = sIntf.up === false || tIntf.up === false;
+      const status: 'up' | 'down' = isDown ? 'down' : 'up';
+
+      if (status === 'up') activeCount++;
+      else downCount++;
+
+      updatedLinks.push({
+        ...link,
+        status,
+      });
+    }
+
+    const message = `Sinkronisasi selesai: ${activeCount} link aktif, ${downCount} down.`;
+    set({
+      nodes: updatedNodes,
+      links: updatedLinks,
+      lastSyncMessage: message,
+    });
+
+    return {
+      activeLinks: activeCount,
+      downLinks: downCount,
+      message,
+    };
+  },
+
   addLink: (link: NetworkLink) => {
-    set(state => ({
-      links: [...state.links, link]
-    }));
+    const { nodes, links } = get();
+    const sourceNode = nodes[link.source];
+    const targetNode = nodes[link.target];
+
+    if (sourceNode && targetNode) {
+      const updatedNodes = {
+        ...nodes,
+        [link.source]: {
+          ...sourceNode,
+          interfaces: { ...sourceNode.interfaces },
+          terminalBuffer: [...sourceNode.terminalBuffer],
+        },
+        [link.target]: {
+          ...targetNode,
+          interfaces: { ...targetNode.interfaces },
+          terminalBuffer: [...targetNode.terminalBuffer],
+        },
+      };
+
+      const sNode = updatedNodes[link.source];
+      const tNode = updatedNodes[link.target];
+
+      const sourceIntf = allocateInterfaceForNode(sNode, links, link.sourceHandle);
+      const targetIntf = allocateInterfaceForNode(tNode, links, link.targetHandle);
+
+      ensureInterfaceRegistered(sNode, sourceIntf);
+      ensureInterfaceRegistered(tNode, targetIntf);
+
+      const registeredLink: NetworkLink = {
+        ...link,
+        sourceHandle: sourceIntf,
+        targetHandle: targetIntf,
+        status: link.status || 'up',
+        latency: link.latency || 0.3,
+        type: link.type || 'straight',
+        style: { stroke: '#64748b', strokeWidth: 2 },
+      };
+
+      sNode.terminalBuffer.push({
+        text: `[LINK UP] Cable connected: ${sourceIntf} <---> ${targetNode.name}:${targetIntf}`,
+        type: 'success',
+      });
+      tNode.terminalBuffer.push({
+        text: `[LINK UP] Cable connected: ${targetIntf} <---> ${sourceNode.name}:${sourceIntf}`,
+        type: 'success',
+      });
+
+      set({
+        nodes: updatedNodes,
+        links: [...links, registeredLink],
+      });
+    } else {
+      set({
+        links: [...links, link],
+      });
+    }
   },
 
   removeLink: (linkId: string) => {
-    set(state => ({
-      links: state.links.filter(l => l.id !== linkId)
-    }));
+    const { nodes, links } = get();
+    const targetLink = links.find(l => l.id === linkId);
+    if (!targetLink) return;
+
+    const updatedNodes = { ...nodes };
+    if (updatedNodes[targetLink.source]) {
+      const sNode = {
+        ...updatedNodes[targetLink.source],
+        terminalBuffer: [...updatedNodes[targetLink.source].terminalBuffer],
+      };
+      sNode.terminalBuffer.push({
+        text: `[LINK DOWN] Cable disconnected from interface ${targetLink.sourceHandle}`,
+        type: 'info',
+      });
+      updatedNodes[targetLink.source] = sNode;
+    }
+    if (updatedNodes[targetLink.target]) {
+      const tNode = {
+        ...updatedNodes[targetLink.target],
+        terminalBuffer: [...updatedNodes[targetLink.target].terminalBuffer],
+      };
+      tNode.terminalBuffer.push({
+        text: `[LINK DOWN] Cable disconnected from interface ${targetLink.targetHandle}`,
+        type: 'info',
+      });
+      updatedNodes[targetLink.target] = tNode;
+    }
+
+    set({
+      nodes: updatedNodes,
+      links: links.filter(l => l.id !== linkId),
+    });
   },
 
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => {

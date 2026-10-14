@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, getStraightPath } from '@xyflow/react';
+import { useNetworkStore } from '../../store/useNetworkStore';
+import { Trash2 } from 'lucide-react';
 
 interface CustomEdgeData {
   sourceHandle?: string;
@@ -21,6 +23,8 @@ export const CustomEdge: React.FC<EdgeProps> = ({
   data,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const removeLink = useNetworkStore(state => state.removeLink);
+  const isDarkMode = useNetworkStore(state => state.isDarkMode);
 
   const [edgePath, labelX, labelY] = getStraightPath({
     sourceX,
@@ -41,13 +45,13 @@ export const CustomEdge: React.FC<EdgeProps> = ({
         d={edgePath}
         fill="none"
         strokeOpacity={0}
-        strokeWidth={16}
+        strokeWidth={20}
         className="cursor-pointer"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       />
 
-      {/* Solid straight slate cable (stroke #64748b, strokeWidth 2) */}
+      {/* Solid straight slate cable when UP; Dashed crimson cable when DOWN */}
       <BaseEdge
         id={id}
         path={edgePath}
@@ -56,12 +60,13 @@ export const CustomEdge: React.FC<EdgeProps> = ({
         style={{
           ...style,
           stroke: isUp ? (isHovered ? '#2563eb' : '#64748b') : '#dc2626',
-          strokeWidth: isHovered ? 3 : 2,
+          strokeWidth: isHovered ? 3 : isUp ? 2 : 2.5,
+          strokeDasharray: isUp ? undefined : '6,4',
           transition: 'stroke 0.15s, stroke-width 0.15s',
         }}
       />
 
-      {/* Edge interface mapping label on hover */}
+      {/* Edge interface mapping label and quick disconnect on hover */}
       <EdgeLabelRenderer>
         <div
           style={{
@@ -71,21 +76,54 @@ export const CustomEdge: React.FC<EdgeProps> = ({
           }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          className="transition-all duration-150 z-20"
+          className="transition-all duration-150 z-30"
         >
           {isHovered ? (
-            <div className="bg-white/90 text-slate-700 border border-slate-300 text-[10px] px-1.5 py-0.5 rounded shadow-sm font-mono whitespace-nowrap flex items-center gap-1.5">
-              <span className="font-semibold text-blue-700">{sourceHandle}</span>
+            <div
+              className={`text-[10px] px-2 py-0.8 rounded-md shadow-md font-mono whitespace-nowrap flex items-center gap-1.5 border backdrop-blur-xs select-none ${
+                isDarkMode
+                  ? 'bg-slate-900/95 text-slate-200 border-slate-700'
+                  : 'bg-white/95 text-slate-800 border-slate-300'
+              }`}
+            >
+              {/* Interface mapping */}
+              <span className="font-semibold text-blue-600 dark:text-blue-400">{sourceHandle}</span>
               <span className="text-slate-400">⟷</span>
-              <span className="font-semibold text-blue-700">{targetHandle}</span>
-              {edgeData.latency && (
-                <span className="text-slate-400 text-[9px] border-l border-slate-200 pl-1">
-                  {edgeData.latency}ms
+              <span className="font-semibold text-blue-600 dark:text-blue-400">{targetHandle}</span>
+
+              {/* Status indicator */}
+              {!isUp ? (
+                <span className="text-rose-600 dark:text-rose-400 font-bold text-[9px] bg-rose-100 dark:bg-rose-950/60 px-1 py-0.2 rounded border border-rose-300 dark:border-rose-800">
+                  DOWN
                 </span>
+              ) : (
+                edgeData.latency && (
+                  <span className="text-slate-400 text-[9px] border-l border-slate-200 dark:border-slate-700 pl-1">
+                    {edgeData.latency}ms
+                  </span>
+                )
               )}
+
+              {/* Disconnect cable button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeLink(id);
+                }}
+                className="ml-1 p-0.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                title="Putus kabel (Hapus link)"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
             </div>
           ) : (
-            <div className="w-1.5 h-1.5 rounded-full bg-slate-400 hover:scale-150 transition-transform cursor-pointer" />
+            <div
+              className={`w-2 h-2 rounded-full transition-transform cursor-pointer ${
+                isUp
+                  ? 'bg-slate-400 hover:scale-150'
+                  : 'bg-rose-500 animate-ping'
+              }`}
+            />
           )}
         </div>
       </EdgeLabelRenderer>

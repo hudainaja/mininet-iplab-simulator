@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useNetworkStore } from '../../store/useNetworkStore';
+import { useNetworkStore, getNextAvailableNodeName } from '../../store/useNetworkStore';
 import { LAB_GUIDES } from '../../docs/labGuides';
 import { MarkdownViewer } from './MarkdownViewer';
 import { 
@@ -65,10 +65,17 @@ export const Sidebar: React.FC = () => {
 
   const selectedGuide = LAB_GUIDES.find(g => g.id === selectedGuideId) || LAB_GUIDES[0];
 
+  // Dynamic smallest available auto-increment name (e.g. h1, s1, r1)
+  const defaultAutoName = getNextAvailableNodeName(newNodeType, nodes);
+
   const handleAddNodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const name = newNodeName.trim() || `${newNodeType[0]}${Date.now().toString().slice(-3)}`;
+    const name = newNodeName.trim() || defaultAutoName;
     const id = name.toLowerCase();
+
+    // Default interface naming in Mininet convention
+    // Switches use eth1 by default (s1-eth1); Routers & Hosts use eth0 (r1-eth0, h1-eth0)
+    const intfName = newNodeType === 'switch' ? `${name}-eth1` : `${name}-eth0`;
 
     addNode({
       id,
@@ -89,11 +96,12 @@ export const Sidebar: React.FC = () => {
         { text: `Started node ${name} on Mininet-IPLab Web.`, type: 'banner' }
       ],
       interfaces: {
-        [`${name}-eth1`]: {
-          name: `${name}-eth1`,
-          mac: `00:00:${Math.floor(Math.random()*90+10)}:01:00:01`,
+        [intfName]: {
+          name: intfName,
+          mac: `00:00:${Math.floor(Math.random() * 90 + 10)}:01:00:01`,
           up: true,
-          ospfCost: 10
+          ospfCost: newNodeType === 'router' ? 10 : undefined,
+          vlanTag: newNodeType === 'switch' ? 1 : undefined,
         }
       }
     });
@@ -440,14 +448,22 @@ export const Sidebar: React.FC = () => {
               )}
 
               <div>
-                <label className="block text-slate-600 dark:text-slate-400 mb-1 font-medium">Hostname / Label</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-600 dark:text-slate-400 font-medium">Hostname / Label</label>
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-mono font-bold">
+                    Otomatis: {defaultAutoName}
+                  </span>
+                </div>
                 <input
                   type="text"
-                  placeholder="e.g. r4, s4, c41"
+                  placeholder={`Contoh: ${defaultAutoName} (otomatis berurutan)`}
                   value={newNodeName}
                   onChange={(e) => setNewNodeName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 py-1.5 text-slate-800 dark:text-slate-200 outline-none focus:border-blue-500 font-mono"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 py-1.5 text-slate-800 dark:text-slate-200 outline-none focus:border-blue-500 font-mono text-xs"
                 />
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                  Kosongkan kolom di atas untuk menggunakan nama berurutan otomatis (<span className="font-mono font-semibold text-slate-700 dark:text-slate-300">{defaultAutoName}</span>).
+                </p>
               </div>
 
               <button
