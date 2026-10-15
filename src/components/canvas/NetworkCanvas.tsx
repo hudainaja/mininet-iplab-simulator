@@ -102,6 +102,8 @@ export const NetworkCanvas: React.FC = () => {
       id: link.id,
       source: link.source,
       target: link.target,
+      sourceHandle: 'source-center',
+      targetHandle: 'target-center',
       type: 'straight',
       style: {
         stroke: link.status === 'down' ? '#dc2626' : '#64748b',

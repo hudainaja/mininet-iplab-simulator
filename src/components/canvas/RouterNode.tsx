@@ -26,45 +26,9 @@ export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
       {/* Floating Hover Tooltip */}
       <NodeTooltip node={node} />
 
-      {/* Circle Icon Container with 4 Interactive Connection Port Handles */}
+      {/* Circle Icon Container */}
       <div className="relative">
-        {/* Top Port Handle (Target / IN) */}
-        <Handle
-          type="target"
-          position={Position.Top}
-          id="target-top"
-          className="!w-3 !h-3 !bg-sky-400 !border-2 !border-white dark:!border-slate-900 !rounded-full transition-all duration-150 z-20 cursor-crosshair opacity-0 group-hover:opacity-100 group-hover:scale-110 hover:!scale-150 hover:!bg-sky-300 shadow-xs"
-          title="Port IN (Top) - Drop kabel ke sini"
-        />
-
-        {/* Right Port Handle (Source / OUT) */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="source-right"
-          className="!w-3 !h-3 !bg-blue-500 !border-2 !border-white dark:!border-slate-900 !rounded-full transition-all duration-150 z-20 cursor-crosshair opacity-0 group-hover:opacity-100 group-hover:scale-110 hover:!scale-150 hover:!bg-blue-400 shadow-xs"
-          title="Port OUT (Right) - Tarik kabel dari sini"
-        />
-
-        {/* Bottom Port Handle (Source / OUT) */}
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          id="source-bottom"
-          className="!w-3 !h-3 !bg-blue-500 !border-2 !border-white dark:!border-slate-900 !rounded-full transition-all duration-150 z-20 cursor-crosshair opacity-0 group-hover:opacity-100 group-hover:scale-110 hover:!scale-150 hover:!bg-blue-400 shadow-xs"
-          title="Port OUT (Bottom) - Tarik kabel dari sini"
-        />
-
-        {/* Left Port Handle (Target / IN) */}
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="target-left"
-          className="!w-3 !h-3 !bg-sky-400 !border-2 !border-white dark:!border-slate-900 !rounded-full transition-all duration-150 z-20 cursor-crosshair opacity-0 group-hover:opacity-100 group-hover:scale-110 hover:!scale-150 hover:!bg-sky-300 shadow-xs"
-          title="Port IN (Left) - Drop kabel ke sini"
-        />
-
-        {/* Centered Fallback Handles */}
+        {/* Centered Connection Handles for Straight Center-to-Center Cables */}
         <Handle
           type="target"
           position={Position.Top}
@@ -78,6 +42,28 @@ export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
           id="source-center"
           className="!w-1 !h-1 !opacity-0 !border-none !pointer-events-none"
           style={{ top: isCore ? '26px' : '24px', left: '50%', transform: 'translate(-50%, -50%)' }}
+        />
+
+        {/* Interactive Port Handles for Drag-and-Drop Cable Connection */}
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="target-port"
+          className={`!w-3 !h-3 !bg-sky-400 !border-2 !border-white dark:!border-slate-900 !rounded-full transition-all duration-150 z-20 cursor-crosshair ${
+            isWiringMode ? 'opacity-100 animate-pulse' : 'opacity-0 group-hover:opacity-100'
+          } hover:!scale-150 hover:!bg-sky-300 shadow-xs`}
+          style={{ top: '-4px', left: '50%', transform: 'translateX(-50%)' }}
+          title="Port IN - Drop kabel ke sini"
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="source-port"
+          className={`!w-3 !h-3 !bg-blue-500 !border-2 !border-white dark:!border-slate-900 !rounded-full transition-all duration-150 z-20 cursor-crosshair ${
+            isWiringMode ? 'opacity-100 animate-pulse' : 'opacity-0 group-hover:opacity-100'
+          } hover:!scale-150 hover:!bg-blue-400 shadow-xs`}
+          style={{ bottom: '-4px', left: '50%', transform: 'translateX(-50%)' }}
+          title="Port OUT - Tarik kabel ke node lain"
         />
 
         {/* Wiring Mode Halo Effect */}
