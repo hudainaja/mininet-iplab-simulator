@@ -1,10 +1,15 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { getPrompt } from '../../engine/cliParser';
 import { TerminalTabs } from './TerminalTabs';
 import { Terminal as TerminalIcon } from 'lucide-react';
+
+type TerminalItem = {
+  text: string;
+  type?: 'output' | 'error' | 'success' | 'info' | 'system' | 'banner';
+};
 
 export const TerminalWindow = React.memo(() => {
   const activeTerminalNodeId = useNetworkStore(state => state.activeTerminalNodeId);
@@ -22,7 +27,7 @@ export const TerminalWindow = React.memo(() => {
   const activeNode = activeTerminalNodeId ? nodes[activeTerminalNodeId] : null;
 
   // Maximum 200 lines displayed in DOM to keep browser rendering lightweight & fast
-  const displayBuffer = useMemo(() => {
+  const displayBuffer = useMemo<TerminalItem[]>(() => {
     if (!activeNode?.terminalBuffer) return [];
     if (activeNode.terminalBuffer.length > 200) {
       return activeNode.terminalBuffer.slice(-200);
@@ -201,7 +206,7 @@ export const TerminalWindow = React.memo(() => {
         style={{ fontSize: `${terminalFontSize}px`, lineHeight: 1.5 }}
         className="flex-1 p-3.5 overflow-y-auto space-y-1 bg-slate-900 dark:bg-slate-950 cursor-text select-text scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent text-slate-100"
       >
-        {displayBuffer.map((item, index) => {
+        {displayBuffer.map((item: TerminalItem, index: number) => {
           let colorClass = 'text-slate-100';
           if (item.type === 'error' || item.text.startsWith('%')) {
             colorClass = 'text-rose-400 font-medium';
