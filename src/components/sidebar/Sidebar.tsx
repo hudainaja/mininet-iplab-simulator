@@ -20,6 +20,7 @@ import {
   RefreshCw,
   Sliders,
   Check,
+  Trash2,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -33,6 +34,7 @@ export const Sidebar: React.FC = () => {
   const selectedGuideId = useNetworkStore(state => state.selectedGuideId);
   const setSelectedGuide = useNetworkStore(state => state.setSelectedGuide);
   const addNode = useNetworkStore(state => state.addNode);
+  const removeNode = useNetworkStore(state => state.removeNode);
 
   // Layout Engine & Preset actions
   const autoSnapOnCli = useNetworkStore(state => state.autoSnapOnCli);
@@ -189,7 +191,7 @@ export const Sidebar: React.FC = () => {
                         selectNode(n.id);
                         openTerminal(n.id);
                       }}
-                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
+                      className={`group flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
                         selectedNodeId === n.id
                           ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800'
                           : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -208,9 +210,21 @@ export const Sidebar: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                        {n.interfaces['lo']?.ip?.split('/')[0] || '1.1.1.1'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                          {n.interfaces['lo']?.ip?.split('/')[0] || '1.1.1.1'}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeNode(n.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-all cursor-pointer"
+                          title={`Hapus node ${n.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -242,16 +256,28 @@ export const Sidebar: React.FC = () => {
                         selectNode(n.id);
                         openTerminal(n.id);
                       }}
-                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
+                      className={`group flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
                         selectedNodeId === n.id
                           ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 font-semibold border border-sky-200 dark:border-sky-800'
                           : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       <span className="font-mono">{n.name}</span>
-                      <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                        {Object.values(n.interfaces)[0]?.ip?.split('/')[0] || '-'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                          {Object.values(n.interfaces)[0]?.ip?.split('/')[0] || '-'}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeNode(n.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-all cursor-pointer"
+                          title={`Hapus node ${n.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -283,16 +309,28 @@ export const Sidebar: React.FC = () => {
                         selectNode(n.id);
                         openTerminal(n.id);
                       }}
-                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
+                      className={`group flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
                         selectedNodeId === n.id
                           ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-800'
                           : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       <span className="font-mono">{n.name}</span>
-                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                        VLAN {Object.values(n.interfaces).map(i => i.vlanTag).filter(Boolean).join(', ')}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                          VLAN {Object.values(n.interfaces).map(i => i.vlanTag).filter(Boolean).join(', ')}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeNode(n.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-all cursor-pointer"
+                          title={`Hapus node ${n.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -324,16 +362,28 @@ export const Sidebar: React.FC = () => {
                         selectNode(n.id);
                         openTerminal(n.id);
                       }}
-                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
+                      className={`group flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
                         selectedNodeId === n.id
                           ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800'
                           : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       <span className="font-mono">{n.name}</span>
-                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                        {Object.values(n.interfaces)[0]?.ip?.split('/')[0] || '-'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                          {Object.values(n.interfaces)[0]?.ip?.split('/')[0] || '-'}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeNode(n.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-all cursor-pointer"
+                          title={`Hapus node ${n.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

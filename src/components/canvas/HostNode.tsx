@@ -3,7 +3,9 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { NetworkNode } from '../../engine/types';
+import { useNetworkStore } from '../../store/useNetworkStore';
 import { NodeTooltip } from './NodeTooltip';
+import { X } from 'lucide-react';
 
 interface HostNodeData {
   node: NetworkNode;
@@ -18,6 +20,7 @@ interface HostNodeProps {
 
 export const HostNode: React.FC<HostNodeProps> = ({ data, selected }) => {
   const { node, isWiringMode, isWiringSource } = data;
+  const removeNode = useNetworkStore(state => state.removeNode);
   const isSelected = selected;
 
   return (
@@ -89,6 +92,20 @@ export const HostNode: React.FC<HostNodeProps> = ({ data, selected }) => {
             <circle cx="12" cy="11" r="1.5" />
           </svg>
         </div>
+
+        {/* Quick Delete Node Button when Selected */}
+        {isSelected && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              removeNode(node.id);
+            }}
+            className="absolute -top-1.5 -right-1.5 z-40 w-5 h-5 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white rounded-full flex items-center justify-center shadow-md cursor-pointer transition-transform hover:scale-110 border-2 border-white dark:border-slate-900"
+            title={`Hapus host ${node.name} (Delete)`}
+          >
+            <X className="w-3 h-3 stroke-[2.5]" />
+          </button>
+        )}
       </div>
 
       {/* Node Name Label Below Square */}

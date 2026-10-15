@@ -3,7 +3,9 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { NetworkNode } from '../../engine/types';
+import { useNetworkStore } from '../../store/useNetworkStore';
 import { NodeTooltip } from './NodeTooltip';
+import { X } from 'lucide-react';
 
 interface RouterNodeData {
   node: NetworkNode;
@@ -18,6 +20,7 @@ interface RouterNodeProps {
 
 export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
   const { node, isWiringMode, isWiringSource } = data;
+  const removeNode = useNetworkStore(state => state.removeNode);
   const isCore = node.role === 'core';
   const isSelected = selected;
 
@@ -94,6 +97,20 @@ export const RouterNode: React.FC<RouterNodeProps> = ({ data, selected }) => {
             <path d="M7 11h3.59L8.3 8.71 9.71 7.3 14.41 12l-4.7 4.7-1.41-1.41L10.59 13H7v-2zm10 2h-3.59l2.29 2.29-1.41 1.41L9.59 12l4.7-4.7 1.41 1.41L13.41 11H17v2z" />
           </svg>
         </div>
+
+        {/* Quick Delete Node Button when Selected */}
+        {isSelected && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              removeNode(node.id);
+            }}
+            className="absolute -top-1.5 -right-1.5 z-40 w-5 h-5 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white rounded-full flex items-center justify-center shadow-md cursor-pointer transition-transform hover:scale-110 border-2 border-white dark:border-slate-900"
+            title={`Hapus router ${node.name} (Delete)`}
+          >
+            <X className="w-3 h-3 stroke-[2.5]" />
+          </button>
+        )}
       </div>
 
       {/* Node Name Label Below Circle */}

@@ -26,6 +26,7 @@ import {
   CheckCircle2, 
   AlertTriangle,
   X,
+  Trash2,
 } from 'lucide-react';
 
 const nodeTypes = {
@@ -49,6 +50,7 @@ export const NetworkCanvas: React.FC = () => {
   const updateNodePosition = useNetworkStore(state => state.updateNodePosition);
   const isSidebarCollapsed = useNetworkStore(state => state.isSidebarCollapsed);
   const applyAutoLayout = useNetworkStore(state => state.applyAutoLayout);
+  const removeNode = useNetworkStore(state => state.removeNode);
 
   // Wiring mode & Quick Connect
   const isWiringMode = useNetworkStore(state => state.isWiringMode);
@@ -83,10 +85,15 @@ export const NetworkCanvas: React.FC = () => {
     );
   }, [nodes, selectedNodeId, isWiringMode, wiringSourceNodeId]);
 
-  // Handle position changes on every drag frame so edges move dynamically in real-time
+  // Handle position changes on every drag frame and node deletions
   const onNodesChange = useCallback((changes: NodeChange[]) => {
+    for (const change of changes) {
+      if (change.type === 'remove') {
+        removeNode(change.id);
+      }
+    }
     setFlowNodes(nds => applyNodeChanges(changes, nds));
-  }, []);
+  }, [removeNode]);
 
   // Commit final position to zustand store when drag ends
   const onNodeDragStop = useCallback((_: MouseEvent | TouchEvent, node: Node) => {
@@ -95,6 +102,13 @@ export const NetworkCanvas: React.FC = () => {
       y: Math.round(node.position.y),
     });
   }, [updateNodePosition]);
+
+  // Handle node deletion triggered by React Flow
+  const onNodesDelete = useCallback((deletedNodes: Node[]) => {
+    for (const node of deletedNodes) {
+      removeNode(node.id);
+    }
+  }, [removeNode]);
 
   // Convert zustand links to React Flow edges with straight line paths
   const flowEdges: Edge[] = useMemo(() => {
@@ -174,22 +188,30 @@ export const NetworkCanvas: React.FC = () => {
     }, 3500);
   };
 
-  // Keyboard shortcut listener: 'W' for wiring mode, 'Esc' to cancel
+  // Keyboard shortcut listener: 'W' for wiring mode, 'Esc' to cancel, 'Delete'/'Backspace' to delete selected node
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = document.activeElement?.tagName.toLowerCase();
       if (activeTag === 'input' || activeTag === 'textarea') return;
+      if (document.activeElement?.closest('.terminal-window') || document.activeElement?.closest('.xterm')) return;
 
       if (e.key === 'Escape' && isWiringMode) {
         setWiringMode(false);
       } else if ((e.key === 'w' || e.key === 'W') && !e.ctrlKey && !e.metaKey) {
         toggleWiringMode();
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId) {
+        e.preventDefault();
+        const nodeToDelete = nodes[selectedNodeId];
+        const nodeName = nodeToDelete?.name || selectedNodeId;
+        removeNode(selectedNodeId);
+        setToastMessage(`Node ${nodeName} berhasil dihapus.`);
+        setTimeout(() => setToastMessage(null), 3000);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isWiringMode, toggleWiringMode, setWiringMode]);
+  }, [isWiringMode, toggleWiringMode, setWiringMode, selectedNodeId, nodes, removeNode]);
 
   // Compute live stats
   const downLinksCount = links.filter(l => l.status === 'down').length;
@@ -204,6 +226,7 @@ export const NetworkCanvas: React.FC = () => {
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onNodeDragStop={onNodeDragStop}
+        onNodesDelete={onNodesDelete}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         fitView
@@ -263,6 +286,23 @@ export const NetworkCanvas: React.FC = () => {
 
       {/* Floating Canvas Quick Action Toolbar at Top-Right */}
       <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+        {/* Delete Selected Node Button */}
+        {selectedNodeId && nodes[selectedNodeId] && (
+          <button
+            onClick={() => {
+              const name = nodes[selectedNodeId]?.name || selectedNodeId;
+              removeNode(selectedNodeId);
+              setToastMessage(`Node ${name} berhasil dihapus.`);
+              setTimeout(() => setToastMessage(null), 3000);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-semibold rounded-lg border border-rose-300 dark:border-rose-800 shadow-xs transition-colors cursor-pointer animate-in fade-in zoom-in-95 duration-150"
+            title={`Hapus node ${nodes[selectedNodeId]?.name} (Tombol Delete / Backspace)`}
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+            <span>Hapus {nodes[selectedNodeId]?.name}</span>
+          </button>
+        )}
+
         {/* Topology Health Pill */}
         <div className="hidden sm:flex items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs shadow-xs">
           {downLinksCount > 0 ? (

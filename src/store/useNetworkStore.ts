@@ -613,6 +613,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         openTerminalTabs: newTabs,
         activeTerminalNodeId: newActiveTerminal,
         selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId,
+        wiringSourceNodeId: state.wiringSourceNodeId === nodeId ? null : state.wiringSourceNodeId,
       };
     });
   },
