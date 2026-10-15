@@ -8,14 +8,10 @@ import {
   FileCode, 
   BookOpen, 
   ChevronDown, 
-  Terminal,
   Activity,
-  Layers,
   Sun,
   Moon,
   Trash2,
-  Cable,
-  RefreshCw,
 } from 'lucide-react';
 import { getCustomPresets, deleteCustomPreset } from '../../engine/dynamicLayoutEngine';
 
@@ -26,27 +22,11 @@ export const Navbar: React.FC = () => {
   const currentPresetId = useNetworkStore(state => state.currentPresetId);
   const loadPreset = useNetworkStore(state => state.loadPreset);
   const resetLab = useNetworkStore(state => state.resetLab);
-  const nodes = useNetworkStore(state => state.nodes);
-  const openTerminalTabs = useNetworkStore(state => state.openTerminalTabs);
   const setIsConfigModalOpen = useNetworkStore(state => state.setIsConfigModalOpen);
   const runVerificationCheck = useNetworkStore(state => state.runVerificationCheck);
   const setActiveSidebarTab = useNetworkStore(state => state.setActiveSidebarTab);
-  
-  // Wiring mode & Sync
-  const isWiringMode = useNetworkStore(state => state.isWiringMode);
-  const toggleWiringMode = useNetworkStore(state => state.toggleWiringMode);
-  const syncNetworkStatus = useNetworkStore(state => state.syncNetworkStatus);
 
   const [presetDropdownOpen, setPresetDropdownOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  const handleSyncClick = () => {
-    setIsSyncing(true);
-    syncNetworkStatus();
-    setTimeout(() => {
-      setIsSyncing(false);
-    }, 600);
-  };
 
   const presets = [
     { id: 'utp-exam-18', name: 'UTP Exam Topology (18 Nodes)', desc: '3 Core Routers triangle mesh, 3 Switches, 6 Edge Routers, 6 Hosts' },
@@ -56,96 +36,43 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between select-none z-30 shrink-0 text-slate-800 dark:text-slate-100 transition-colors">
-      {/* Brand & Badge */}
+      {/* Brand & Unified Lab Selector */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
             <Network className="w-5 h-5" />
           </div>
-          <div>
+          <div className="leading-tight">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-sm tracking-tight text-slate-800 dark:text-slate-100">Mininet-IPLab</span>
               <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                Web v2.0
+                v2.0
               </span>
             </div>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-none">Computer Network Exam Simulator</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">Computer Network Exam Simulator</p>
           </div>
         </div>
 
         {/* Separator */}
-        <div className="h-6 w-px bg-slate-200 dark:border-slate-800 mx-1 hidden md:block" />
+        <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
 
-        {/* Status Indicators */}
-        <div className="hidden lg:flex items-center gap-2 text-xs">
-          {/* Active Lab */}
-          <div className="px-2.5 py-1 rounded-md bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-            <span className="text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase">Lab:</span>
-            <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[140px]">{currentPresetName}</span>
-          </div>
-
-          {/* Node Count */}
-          <div className="px-2.5 py-1 rounded-md bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span className="text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase">Nodes:</span>
-            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{Object.keys(nodes).length}</span>
-          </div>
-
-          {/* Active Terminals */}
-          <div className="px-2.5 py-1 rounded-md bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-            <Terminal className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase">Terminals:</span>
-            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{openTerminalTabs.length}</span>
-          </div>
-
-          {/* Status Live */}
-          <div className="px-2.5 py-1 rounded-md bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-slate-600 dark:text-slate-300 text-xs font-medium">Ready</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2">
-        {/* Mode Tarik Kabel Toggle */}
-        <button
-          onClick={toggleWiringMode}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer border ${
-            isWiringMode
-              ? 'bg-blue-600 border-blue-700 text-white shadow-xs'
-              : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
-          }`}
-          title="Mode Tarik Kabel (Tombol Pintas: W)"
-        >
-          <Cable className={`w-3.5 h-3.5 ${isWiringMode ? 'animate-pulse text-amber-300' : 'text-blue-600 dark:text-blue-400'}`} />
-          <span className="hidden sm:inline">{isWiringMode ? 'Wiring Mode (On)' : 'Tarik Kabel'}</span>
-        </button>
-
-        {/* Sync Status Button */}
-        <button
-          onClick={handleSyncClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-md border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
-          title="Sinkronisasi Status Jaringan: Memperbarui garis kabel visual sesuai status antarmuka Mininet (UP/DOWN)"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
-          <span className="hidden md:inline">Sync Status</span>
-        </button>
-
-        {/* Preset Selector Dropdown */}
+        {/* Unified Lab Dropdown Selector */}
         <div className="relative">
           <button
             onClick={() => setPresetDropdownOpen(!presetDropdownOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-md border border-slate-300 dark:border-slate-700 transition-colors shadow-2xs cursor-pointer"
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-2xs cursor-pointer"
+            title="Pilih Topologi Lab / Preset"
           >
-            <span>Lab Presets</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 hidden md:inline">Lab:</span>
+            <span className="font-semibold truncate max-w-[160px] sm:max-w-[220px]">{currentPresetName}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           </button>
 
           {presetDropdownOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg p-1 z-50">
+            <div className="absolute left-0 top-full mt-1.5 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl p-1 z-50">
               <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
-                Choose Topology Preset
+                Pilih Preset Topologi Lab
               </div>
               {presets.map(p => (
                 <button
@@ -171,7 +98,7 @@ export const Navbar: React.FC = () => {
                 return (
                   <>
                     <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 border-t border-slate-100 dark:border-slate-800 mt-1.5">
-                      Saved Custom Presets
+                      Preset Kustom Tersimpan
                     </div>
                     {customPresets.map(cp => (
                       <div
@@ -213,54 +140,58 @@ export const Navbar: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
 
-        {/* Verify Connectivity Button */}
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2">
+        {/* Verify Connectivity Button - Primary CTA */}
         <button
           onClick={runVerificationCheck}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md shadow-xs transition-colors cursor-pointer"
-          title="Run automated ping and routing verification"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+          title="Uji konektivitas otomatis (Ping, OSPF, BGP, VLAN)"
         >
           <Activity className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Verify Lab</span>
+          <span>Verify Lab</span>
         </button>
 
-        {/* Export / Import Button */}
+        <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 mx-0.5" />
+
+        {/* Config / JSON */}
         <button
           onClick={() => setIsConfigModalOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-md border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
-          title="Export or Import Topology JSON"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+          title="Export / Import Konfigurasi Topologi JSON"
         >
-          <FileCode className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Config</span>
+          <FileCode className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          <span className="hidden sm:inline">Config</span>
         </button>
 
         {/* Guide Button */}
         <button
           onClick={() => setActiveSidebarTab('guide')}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-md border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
-          title="Open Lab Objectives & Addressing Guide"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+          title="Buka Panduan Modul Lab & Addressing"
         >
           <BookOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span className="hidden md:inline">Guide</span>
-        </button>
-
-        {/* Dark Mode Toggle Button */}
-        <button
-          onClick={toggleDarkMode}
-          className="p-1.5 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-          title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-slate-600" />}
+          <span className="hidden sm:inline">Guide</span>
         </button>
 
         {/* Reset Lab Button */}
         <button
           onClick={resetLab}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-md border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
-          title="Reset current lab topology to default"
+          className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+          title="Reset topologi ke kondisi awal"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span className="hidden lg:inline">Reset</span>
+        </button>
+
+        {/* Dark Mode Toggle Button */}
+        <button
+          onClick={toggleDarkMode}
+          className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+          title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-600" />}
         </button>
       </div>
     </header>
