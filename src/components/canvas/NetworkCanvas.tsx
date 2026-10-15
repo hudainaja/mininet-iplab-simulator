@@ -85,15 +85,37 @@ export const NetworkCanvas: React.FC = () => {
     );
   }, [nodes, selectedNodeId, isWiringMode, wiringSourceNodeId]);
 
-  // Handle position changes on every drag frame and node deletions
+  // Batch and throttle drag position changes with requestAnimationFrame (60 FPS smooth, zero frame drops)
+  const rafIdRef = React.useRef<number | null>(null);
+  const pendingChangesRef = React.useRef<NodeChange[]>([]);
+
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     for (const change of changes) {
       if (change.type === 'remove') {
         removeNode(change.id);
       }
     }
-    setFlowNodes(nds => applyNodeChanges(changes, nds));
+    pendingChangesRef.current.push(...changes);
+
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(() => {
+        const queuedChanges = pendingChangesRef.current;
+        pendingChangesRef.current = [];
+        rafIdRef.current = null;
+        if (queuedChanges.length > 0) {
+          setFlowNodes(nds => applyNodeChanges(queuedChanges, nds));
+        }
+      });
+    }
   }, [removeNode]);
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, []);
 
   // Commit final position to zustand store when drag ends
   const onNodeDragStop = useCallback((_: MouseEvent | TouchEvent, node: Node) => {

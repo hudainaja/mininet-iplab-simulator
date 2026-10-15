@@ -8,7 +8,7 @@ interface NodeTooltipProps {
   node: NetworkNode;
 }
 
-export const NodeTooltip: React.FC<NodeTooltipProps> = ({ node }) => {
+export const NodeTooltip = React.memo<NodeTooltipProps>(({ node }) => {
   const isDarkMode = useNetworkStore(state => state.isDarkMode);
   const isCore = node.role === 'core';
   const interfaces = Object.values(node.interfaces || {});
@@ -141,4 +141,7 @@ export const NodeTooltip: React.FC<NodeTooltipProps> = ({ node }) => {
       </div>
     </div>
   );
-};
+});
+
+NodeTooltip.displayName = 'NodeTooltip';
+

@@ -6,7 +6,7 @@ import { getPrompt } from '../../engine/cliParser';
 import { TerminalTabs } from './TerminalTabs';
 import { Terminal as TerminalIcon } from 'lucide-react';
 
-export const TerminalWindow: React.FC = () => {
+export const TerminalWindow = React.memo(() => {
   const activeTerminalNodeId = useNetworkStore(state => state.activeTerminalNodeId);
   const nodes = useNetworkStore(state => state.nodes);
   const terminalFontSize = useNetworkStore(state => state.terminalFontSize);
@@ -21,12 +21,24 @@ export const TerminalWindow: React.FC = () => {
 
   const activeNode = activeTerminalNodeId ? nodes[activeTerminalNodeId] : null;
 
-  // Auto-scroll on new buffer items
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  // Maximum 200 lines displayed in DOM to keep browser rendering lightweight & fast
+  const displayBuffer = useMemo(() => {
+    if (!activeNode?.terminalBuffer) return [];
+    if (activeNode.terminalBuffer.length > 200) {
+      return activeNode.terminalBuffer.slice(-200);
     }
-  }, [activeNode?.terminalBuffer.length]);
+    return activeNode.terminalBuffer;
+  }, [activeNode?.terminalBuffer]);
+
+  // Smooth auto-scroll to bottom using requestAnimationFrame
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const raf = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [displayBuffer.length]);
 
   // Focus input on active tab change
   useEffect(() => {
@@ -38,9 +50,13 @@ export const TerminalWindow: React.FC = () => {
   const handleSubmit = useCallback((e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!activeNode) return;
-    executeTerminalCommand(inputVal);
+    const cmd = inputVal;
+    // Clear input field immediately for native instant responsiveness
     setInputVal('');
     setHistoryIndex(null);
+    if (cmd.trim()) {
+      executeTerminalCommand(cmd);
+    }
   }, [activeNode, executeTerminalCommand, inputVal]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -185,7 +201,7 @@ export const TerminalWindow: React.FC = () => {
         style={{ fontSize: `${terminalFontSize}px`, lineHeight: 1.5 }}
         className="flex-1 p-3.5 overflow-y-auto space-y-1 bg-slate-900 dark:bg-slate-950 cursor-text select-text scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent text-slate-100"
       >
-        {activeNode.terminalBuffer.map((item, index) => {
+        {displayBuffer.map((item, index) => {
           let colorClass = 'text-slate-100';
           if (item.type === 'error' || item.text.startsWith('%')) {
             colorClass = 'text-rose-400 font-medium';
@@ -245,4 +261,7 @@ export const TerminalWindow: React.FC = () => {
       </div>
     </div>
   );
-};
+});
+
+TerminalWindow.displayName = 'TerminalWindow';
+

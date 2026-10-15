@@ -61,6 +61,19 @@ function clearLocalStorage() {
   }
 }
 
+// ----- Terminal Buffer & Performance Constants -----
+const MAX_TERMINAL_BUFFER = 200;
+function appendTerminalBuffer(
+  node: NetworkNode,
+  item: { text: string; type?: 'output' | 'error' | 'success' | 'info' | 'system' | 'banner' }
+) {
+  node.terminalBuffer.push(item);
+  if (node.terminalBuffer.length > MAX_TERMINAL_BUFFER) {
+    node.terminalBuffer = node.terminalBuffer.slice(-MAX_TERMINAL_BUFFER);
+  }
+}
+
+
 interface VerificationResult {
   test: string;
   source: string;
@@ -126,6 +139,10 @@ interface NetworkState {
   // Network Status Synchronization
   lastSyncMessage: string | null;
   syncNetworkStatus: () => { activeLinks: number; downLinks: number; message: string };
+
+  // Transient Hover State for Cable Interfaces & Nodes
+  hoveredNodeId: string | null;
+  setHoveredNodeId: (nodeId: string | null) => void;
 
   // Actions
   loadPreset: (presetId: string) => void;
@@ -306,6 +323,10 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
   setWiringSourceNodeId: (nodeId: string | null) => {
     set({ wiringSourceNodeId: nodeId });
   },
+
+  // Transient Hover State for Cable Interfaces & Nodes
+  hoveredNodeId: null,
+  setHoveredNodeId: (nodeId: string | null) => set({ hoveredNodeId: nodeId }),
 
   autoSnapOnCli: true,
 
@@ -513,13 +534,13 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       if (res.clear) {
         currentNode.terminalBuffer = [];
       } else {
-        currentNode.terminalBuffer.push({
+        appendTerminalBuffer(currentNode, {
           text: `${prompt}${line}`,
           type: 'system'
         });
 
         if (res.output) {
-          currentNode.terminalBuffer.push({
+          appendTerminalBuffer(currentNode, {
             text: res.output,
             type: res.type || 'output'
           });
@@ -724,11 +745,11 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
     ensureInterfaceRegistered(sNode, sourceIntf);
     ensureInterfaceRegistered(tNode, targetIntf);
 
-    sNode.terminalBuffer.push({
+    appendTerminalBuffer(sNode, {
       text: `[LINK UP] Port ${sourceIntf} connected to ${targetNode.name}:${targetIntf}`,
       type: 'success',
     });
-    tNode.terminalBuffer.push({
+    appendTerminalBuffer(tNode, {
       text: `[LINK UP] Port ${targetIntf} connected to ${sourceNode.name}:${sourceIntf}`,
       type: 'success',
     });
@@ -853,11 +874,11 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         style: { stroke: '#64748b', strokeWidth: 2 },
       };
 
-      sNode.terminalBuffer.push({
+      appendTerminalBuffer(sNode, {
         text: `[LINK UP] Cable connected: ${sourceIntf} <---> ${targetNode.name}:${targetIntf}`,
         type: 'success',
       });
-      tNode.terminalBuffer.push({
+      appendTerminalBuffer(tNode, {
         text: `[LINK UP] Cable connected: ${targetIntf} <---> ${sourceNode.name}:${sourceIntf}`,
         type: 'success',
       });
@@ -884,7 +905,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         ...updatedNodes[targetLink.source],
         terminalBuffer: [...updatedNodes[targetLink.source].terminalBuffer],
       };
-      sNode.terminalBuffer.push({
+      appendTerminalBuffer(sNode, {
         text: `[LINK DOWN] Cable disconnected from interface ${targetLink.sourceHandle}`,
         type: 'info',
       });
@@ -895,7 +916,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         ...updatedNodes[targetLink.target],
         terminalBuffer: [...updatedNodes[targetLink.target].terminalBuffer],
       };
-      tNode.terminalBuffer.push({
+      appendTerminalBuffer(tNode, {
         text: `[LINK DOWN] Cable disconnected from interface ${targetLink.targetHandle}`,
         type: 'info',
       });

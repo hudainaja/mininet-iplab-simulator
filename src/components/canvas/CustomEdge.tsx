@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, getStraightPath } from '@xyflow/react';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { Trash2 } from 'lucide-react';
@@ -22,8 +22,10 @@ function shortIntfName(fullName: string): string {
   return fullName;
 }
 
-export const CustomEdge: React.FC<EdgeProps> = ({
+export const CustomEdge = React.memo<EdgeProps>(({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -35,6 +37,16 @@ export const CustomEdge: React.FC<EdgeProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const removeLink = useNetworkStore(state => state.removeLink);
   const isDarkMode = useNetworkStore(state => state.isDarkMode);
+
+  // Check if either connected node is currently hovered
+  const isNodeConnectedHovered = useNetworkStore(
+    useCallback(
+      (state) => Boolean(state.hoveredNodeId && (state.hoveredNodeId === source || state.hoveredNodeId === target)),
+      [source, target]
+    )
+  );
+
+  const isVisible = isHovered || isNodeConnectedHovered;
 
   const [edgePath, labelX, labelY] = getStraightPath({
     sourceX,
@@ -59,9 +71,9 @@ export const CustomEdge: React.FC<EdgeProps> = ({
   const py = ux;
 
   // Offset distance along the wire from source and target node centers
-  // Router nodes have radius ~28px; placing label at 48px ensures clear visibility outside node
-  const dOffset = Math.min(dist * 0.35, Math.max(46, dist * 0.22));
-  const pOffset = 11;
+  // An offset of 40px along the wire and 10px perpendicular guarantees clarity outside the node
+  const dOffset = Math.min(dist * 0.35, Math.max(40, dist * 0.22));
+  const pOffset = 10;
 
   const srcLabelX = sourceX + ux * dOffset + px * pOffset;
   const srcLabelY = sourceY + uy * dOffset + py * pOffset;
@@ -69,8 +81,8 @@ export const CustomEdge: React.FC<EdgeProps> = ({
   const tgtLabelY = targetY - uy * dOffset + py * pOffset;
 
   const labelBadgeClass = isDarkMode
-    ? 'bg-slate-900/90 text-sky-300 border-slate-700/80 shadow-sm shadow-black/30'
-    : 'bg-white/95 text-blue-700 border-slate-300 shadow-xs';
+    ? 'bg-slate-900/95 text-sky-300 border-slate-700/80 shadow-md shadow-black/40'
+    : 'bg-white/95 text-blue-700 border-slate-300 shadow-sm';
 
   return (
     <>
@@ -79,7 +91,7 @@ export const CustomEdge: React.FC<EdgeProps> = ({
         d={edgePath}
         fill="none"
         strokeOpacity={0}
-        strokeWidth={20}
+        strokeWidth={24}
         className="cursor-pointer"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -93,41 +105,47 @@ export const CustomEdge: React.FC<EdgeProps> = ({
         className="react-flow__edge-path"
         style={{
           ...style,
-          stroke: isUp ? (isHovered ? '#2563eb' : '#64748b') : '#dc2626',
-          strokeWidth: isHovered ? 3 : isUp ? 2 : 2.5,
+          stroke: isUp ? (isVisible ? '#2563eb' : '#64748b') : '#dc2626',
+          strokeWidth: isVisible ? 3 : isUp ? 2 : 2.5,
           strokeDasharray: isUp ? undefined : '6,4',
-          transition: 'stroke 0.15s, stroke-width 0.15s',
+          transition: 'stroke 0.2s ease-in-out, stroke-width 0.2s ease-in-out',
         }}
       />
 
       <EdgeLabelRenderer>
-        {/* Always-visible interface label near SOURCE endpoint */}
+        {/* Source endpoint interface label (Hidden by default, smooth fade & scale on hover) */}
         <div
           style={{
             position: 'absolute',
-            transform: `translate(-50%, -50%) translate(${srcLabelX}px,${srcLabelY}px)`,
+            transform: `translate3d(calc(-50% + ${srcLabelX}px), calc(-50% + ${srcLabelY}px), 0) scale(${isVisible ? 1 : 0.92})`,
+            opacity: isVisible ? 1 : 0,
             pointerEvents: 'none',
+            transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+            willChange: 'opacity, transform',
           }}
           className="z-20"
         >
           <span
-            className={`text-[9px] font-mono font-semibold px-1 py-0.5 rounded border shadow-xs select-none backdrop-blur-xs ${labelBadgeClass}`}
+            className={`text-[9px] font-mono font-semibold px-1 py-0.5 rounded border select-none backdrop-blur-xs ${labelBadgeClass}`}
           >
             {shortIntfName(sourceHandle)}
           </span>
         </div>
 
-        {/* Always-visible interface label near TARGET endpoint */}
+        {/* Target endpoint interface label (Hidden by default, smooth fade & scale on hover) */}
         <div
           style={{
             position: 'absolute',
-            transform: `translate(-50%, -50%) translate(${tgtLabelX}px,${tgtLabelY}px)`,
+            transform: `translate3d(calc(-50% + ${tgtLabelX}px), calc(-50% + ${tgtLabelY}px), 0) scale(${isVisible ? 1 : 0.92})`,
+            opacity: isVisible ? 1 : 0,
             pointerEvents: 'none',
+            transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+            willChange: 'opacity, transform',
           }}
           className="z-20"
         >
           <span
-            className={`text-[9px] font-mono font-semibold px-1 py-0.5 rounded border shadow-xs select-none backdrop-blur-xs ${labelBadgeClass}`}
+            className={`text-[9px] font-mono font-semibold px-1 py-0.5 rounded border select-none backdrop-blur-xs ${labelBadgeClass}`}
           >
             {shortIntfName(targetHandle)}
           </span>
@@ -137,16 +155,16 @@ export const CustomEdge: React.FC<EdgeProps> = ({
         <div
           style={{
             position: 'absolute',
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            transform: `translate3d(calc(-50% + ${labelX}px), calc(-50% + ${labelY}px), 0)`,
             pointerEvents: 'all',
           }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          className="transition-all duration-150 z-30"
+          className="transition-all duration-200 ease-in-out z-30"
         >
-          {isHovered ? (
+          {isVisible ? (
             <div
-              className={`text-[10px] px-2 py-0.8 rounded-md shadow-md font-mono whitespace-nowrap flex items-center gap-1.5 border backdrop-blur-xs select-none ${
+              className={`text-[10px] px-2 py-0.8 rounded-md shadow-md font-mono whitespace-nowrap flex items-center gap-1.5 border backdrop-blur-xs select-none animate-in fade-in zoom-in-95 duration-150 ${
                 isDarkMode
                   ? 'bg-slate-900/95 text-slate-200 border-slate-700'
                   : 'bg-white/95 text-slate-800 border-slate-300'
@@ -195,4 +213,7 @@ export const CustomEdge: React.FC<EdgeProps> = ({
       </EdgeLabelRenderer>
     </>
   );
-};
+});
+
+CustomEdge.displayName = 'CustomEdge';
+

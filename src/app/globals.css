@@ -44,12 +44,26 @@ body {
   z-index: 99990 !important;
 }
 
-/* Dynamic auto-snap smooth transform transition */
+/* Dynamic auto-snap smooth transform transition with GPU acceleration */
 .react-flow__node {
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.react-flow__node.dragging {
+.react-flow__node.dragging,
+.react-flow__node:active {
   transition: none !important;
+  will-change: transform;
 }
+
+.react-flow__edge-path {
+  will-change: stroke, stroke-width;
+}
+
+.react-flow__viewport {
+  transform-origin: 0 0;
+  backface-visibility: hidden;
+}
+
 

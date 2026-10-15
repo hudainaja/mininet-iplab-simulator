@@ -17,7 +17,7 @@ import {
   Laptop
 } from 'lucide-react';
 
-export const TerminalTabs: React.FC = () => {
+export const TerminalTabs = React.memo(() => {
   const openTerminalTabs = useNetworkStore(state => state.openTerminalTabs);
   const activeTerminalNodeId = useNetworkStore(state => state.activeTerminalNodeId);
   const setActiveTerminal = useNetworkStore(state => state.setActiveTerminal);
@@ -163,4 +163,7 @@ export const TerminalTabs: React.FC = () => {
       </div>
     </div>
   );
-};
+});
+
+TerminalTabs.displayName = 'TerminalTabs';
+
