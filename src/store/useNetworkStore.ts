@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { NetworkNode, NetworkLink } from '../engine/types';
 import { createUtpExamPreset, createStaticRoutingPreset, createBlankPreset, LabPreset } from '../engine/presets';
-import { executeCommand, getPrompt } from '../engine/cliParser';
+import { executeCommand, getPrompt, generateAllNodeConfigsDump } from '../engine/cliParser';
 import { simulatePing } from '../engine/packetSimulator';
 import {
   computeDynamicTopologyLayout,
@@ -175,6 +175,8 @@ interface NetworkState {
   // Export / Import
   exportTopologyJson: () => string;
   importTopologyJson: (json: string) => boolean;
+  exportAllConfigsDump: () => string;
+  applyBatchCliCommands: (script: string) => { successCount: number; errors: string[] };
 
   // Verification
   runVerificationCheck: () => void;
@@ -444,13 +446,21 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
 
   restoreAutoSave: () => {
     const saved = loadFromLocalStorage();
-    if (saved) {
+    if (saved && saved.nodes && Object.keys(saved.nodes).length > 0) {
+      const nodeIds = Object.keys(saved.nodes);
+      const firstId = nodeIds[0] || null;
+      if (typeof document !== 'undefined' && saved.isDarkMode !== undefined) {
+        document.documentElement.classList.toggle('dark', Boolean(saved.isDarkMode));
+      }
       set({
         currentPresetId: saved.currentPresetId,
         currentPresetName: saved.currentPresetName,
         nodes: saved.nodes,
         links: saved.links,
         isDarkMode: saved.isDarkMode,
+        selectedNodeId: firstId,
+        activeTerminalNodeId: firstId,
+        openTerminalTabs: nodeIds.slice(0, 4),
       });
       return true;
     }
@@ -945,7 +955,14 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
   exportTopologyJson: () => {
     const { nodes, links, currentPresetId, currentPresetName } = get();
     return JSON.stringify(
-      { presetId: currentPresetId, presetName: currentPresetName, nodes, links },
+      {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        presetId: currentPresetId,
+        presetName: currentPresetName,
+        nodes,
+        links,
+      },
       null,
       2
     );
@@ -954,22 +971,90 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
   importTopologyJson: (json: string) => {
     try {
       const parsed = JSON.parse(json);
-      if (parsed.nodes && parsed.links) {
-        const firstNodeId = Object.keys(parsed.nodes)[0] || null;
+      if (parsed.nodes && parsed.links && typeof parsed.nodes === 'object') {
+        const nodeIds = Object.keys(parsed.nodes);
+        if (nodeIds.length === 0) return false;
+        const firstNodeId = nodeIds[0];
+        const newPresetId = parsed.presetId || 'custom-imported';
+        const newPresetName = parsed.presetName || 'Imported Custom Lab';
+
         set({
           nodes: parsed.nodes,
           links: parsed.links,
-          currentPresetName: parsed.presetName || 'Custom Imported Lab',
+          currentPresetId: newPresetId,
+          currentPresetName: newPresetName,
           selectedNodeId: firstNodeId,
           activeTerminalNodeId: firstNodeId,
-          openTerminalTabs: Object.keys(parsed.nodes).slice(0, 4),
+          openTerminalTabs: nodeIds.slice(0, 4),
         });
+
+        // Immediately persist to localStorage
+        saveToLocalStorage({
+          currentPresetId: newPresetId,
+          currentPresetName: newPresetName,
+          nodes: parsed.nodes,
+          links: parsed.links,
+          isDarkMode: get().isDarkMode,
+        });
+
         return true;
       }
       return false;
     } catch {
       return false;
     }
+  },
+
+  exportAllConfigsDump: () => {
+    const { nodes } = get();
+    return generateAllNodeConfigsDump(nodes);
+  },
+
+  applyBatchCliCommands: (script: string) => {
+    const trimmed = script.trim();
+    // Auto-detect if user pasted a JSON snapshot instead of CLI commands
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      const ok = get().importTopologyJson(trimmed);
+      if (ok) {
+        return { successCount: 1, errors: [] };
+      }
+    }
+
+    const { nodes } = get();
+    const lines = script.split(/\r?\n/);
+    let targetNodeId: string = get().activeTerminalNodeId || Object.keys(nodes)[0] || 'r1';
+    let count = 0;
+    const errors: string[] = [];
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      // Check for node switch directives:
+      // e.g. "! Node: r1", "# Node: r1", "[r1]", "node r1"
+      const nodeMatch =
+        line.match(/^[!#]\s*(?:node|router|switch|host)?:?\s*([a-zA-Z0-9_\-]+)/i) ||
+        line.match(/^\[([a-zA-Z0-9_\-]+)\]$/) ||
+        line.match(/^node\s+([a-zA-Z0-9_\-]+)/i);
+
+      if (nodeMatch) {
+        const potentialNode = nodeMatch[1].toLowerCase();
+        if (get().nodes[potentialNode]) {
+          targetNodeId = potentialNode;
+          continue;
+        }
+      }
+
+      // Skip generic comments
+      if (line.startsWith('!') || line.startsWith('#')) continue;
+
+      // Execute on target node
+      get().setActiveTerminal(targetNodeId);
+      get().executeTerminalCommand(line);
+      count++;
+    }
+
+    return { successCount: count, errors };
   },
 
   runVerificationCheck: () => {

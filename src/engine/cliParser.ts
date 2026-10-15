@@ -1554,7 +1554,7 @@ function formatShowRouteMap(node: NetworkNode): string {
   return lines.join('\n');
 }
 
-function formatShowRunningConfig(node: NetworkNode): string {
+export function formatShowRunningConfig(node: NetworkNode): string {
   const lines: string[] = [
     `! Current configuration on ${node.name}:`,
     `! FRRouting Configuration Version 8.1`,
@@ -1631,6 +1631,57 @@ function formatShowRunningConfig(node: NetworkNode): string {
 
   lines.push(`end`);
   return lines.join('\n');
+}
+
+export function generateAllNodeConfigsDump(nodes: Record<string, NetworkNode>): string {
+  const sections: string[] = [
+    `! ========================================================`,
+    `! MININET-IPLAB CONFIGURATION DUMP`,
+    `! Exported at: ${new Date().toISOString()}`,
+    `! Total Nodes: ${Object.keys(nodes).length}`,
+    `! ========================================================`,
+    ``
+  ];
+
+  for (const node of Object.values(nodes)) {
+    sections.push(`! --------------------------------------------------------`);
+    sections.push(`! NODE: ${node.name} (${node.type.toUpperCase()}${node.role ? ` - ${node.role}` : ''})`);
+    sections.push(`! --------------------------------------------------------`);
+
+    if (node.type === 'router') {
+      sections.push(formatShowRunningConfig(node));
+    } else if (node.type === 'switch') {
+      sections.push(`# Open vSwitch: ${node.name}`);
+      for (const [name, intf] of Object.entries(node.interfaces)) {
+        if (intf.vlanMode === 'trunk') {
+          if (intf.vlanTrunks && intf.vlanTrunks.length > 0) {
+            sections.push(`ovs-vsctl set port ${name} vlan_mode=trunk trunks=${intf.vlanTrunks.join(',')}`);
+          } else {
+            sections.push(`ovs-vsctl set port ${name} vlan_mode=trunk`);
+          }
+        } else if (intf.vlanTag) {
+          sections.push(`ovs-vsctl set port ${name} tag=${intf.vlanTag}`);
+        }
+      }
+    } else {
+      sections.push(`# Host: ${node.name}`);
+      for (const [name, intf] of Object.entries(node.interfaces)) {
+        if (intf.ip) sections.push(`ip addr add ${intf.ip} dev ${name}`);
+        if (intf.ipv6) sections.push(`ip -6 addr add ${intf.ipv6} dev ${name}`);
+        if (intf.up) sections.push(`ip link set ${name} up`);
+      }
+      if (node.defaultGateway) {
+        const devPart = node.defaultGatewayDev ? ` dev ${node.defaultGatewayDev}` : '';
+        sections.push(`ip route add default via ${node.defaultGateway}${devPart}`);
+      }
+      for (const r of node.staticRoutes || []) {
+        sections.push(`ip route add ${r.destination}/${r.prefix} via ${r.nextHop}`);
+      }
+    }
+    sections.push(``);
+  }
+
+  return sections.join('\n');
 }
 
 function formatHostIpAddrShow(node: NetworkNode): string {
