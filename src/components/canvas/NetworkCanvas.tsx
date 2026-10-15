@@ -168,7 +168,7 @@ export const NetworkCanvas: React.FC = () => {
       setIsSyncing(false);
     }, 600);
     setTimeout(() => {
-      setToastMessage(null), 3500;
+      setToastMessage(null);
     }, 3500);
   };
 
