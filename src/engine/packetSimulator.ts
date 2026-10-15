@@ -88,12 +88,20 @@ function findBestIpv4Route(
 
   // 5. Host Default Gateway
   if (node.defaultGateway) {
+    if (node.defaultGatewayDev && node.interfaces[node.defaultGatewayDev]?.up) {
+      return { exitInterface: node.defaultGatewayDev, nextHopIp: node.defaultGateway };
+    }
     for (const [intfName, intf] of Object.entries(node.interfaces)) {
       if (intf.ip && intf.up) {
         const p = parseIpv4Cidr(intf.ip);
         if (p && isIpv4InSubnet(node.defaultGateway, p.network, p.prefix)) {
           return { exitInterface: intfName, nextHopIp: node.defaultGateway };
         }
+      }
+    }
+    for (const [intfName, intf] of Object.entries(node.interfaces)) {
+      if (intf.up && !intfName.startsWith('lo')) {
+        return { exitInterface: intfName, nextHopIp: node.defaultGateway };
       }
     }
   }

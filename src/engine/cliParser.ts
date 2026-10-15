@@ -1,8 +1,8 @@
 import { NetworkNode, NetworkLink } from './types';
-import { parseIpv4Cidr, parseIpv6Cidr, netmaskToPrefix } from './ipUtils';
+import { parseIpv4Cidr, parseIpv6Cidr, netmaskToPrefix, isIpv4InSubnet } from './ipUtils';
 import { computeOspfNeighbors, computeOspfRoutes, getRouterId } from './ospfEngine';
 import { computeBgpNeighbors, computeBgpRoutes, getBgpRouterId } from './bgpEngine';
-import { parseOvsShow, setSwitchPortVlan, removeSwitchPortVlan } from './vlanEngine';
+import { parseOvsShow, setSwitchPortVlan, removeSwitchPortVlan, setSwitchPortTrunk } from './vlanEngine';
 import { addSitTunnel, formatTunnelShow } from './tunnelEngine';
 import { simulatePing, simulateTraceroute } from './packetSimulator';
 
@@ -127,6 +127,22 @@ export function executeCommand(
 // -------------------------------------------------------------
 function resolveOrCreateInterface(node: NetworkNode, rawName: string): string {
   let name = rawName;
+  const lower = name.toLowerCase();
+
+  // Normalize Loopback variants: 'lo', 'lo0', 'loopback', 'loopback0'
+  if (lower === 'lo' || lower === 'loopback' || lower === 'lo0' || lower === 'loopback0') {
+    name = 'lo';
+    if (!node.interfaces['lo']) {
+      node.interfaces['lo'] = {
+        name: 'lo',
+        mac: '00:00:00:00:00:01',
+        up: true,
+        ospfCost: 10
+      };
+    }
+    return 'lo';
+  }
+
   // If user typed "eth1" on "r1", check if "r1-eth1" exists
   if (!node.interfaces[name]) {
     const candidate = `${node.name}-${name}`;
@@ -298,7 +314,10 @@ function handleRouterCommand(
 
   // Interface Selection: `interface <name>` / `int <name>`
   if (isInterfaceCmd && parts.length >= 2) {
-    const rawName = parts[1];
+    let rawName = parts[1];
+    if (parts.length >= 3 && (parts[1].toLowerCase() === 'loopback' || parts[1].toLowerCase() === 'lo')) {
+      rawName = 'lo';
+    }
     const resolved = resolveOrCreateInterface(node, rawName);
     node.selectedInterface = resolved;
     node.cliMode = 'config-if';
@@ -592,6 +611,15 @@ function handleRouterCommand(
       return { output: '' };
     }
 
+    // `neighbor <ip> route-reflector-client`
+    if (cmd.match(/^neighbor\s+[\d\.]+\s+route-reflector-client/i)) {
+      const ip = parts[1];
+      if (node.bgpNeighbors?.[ip]) {
+        node.bgpNeighbors[ip].routeReflectorClient = true;
+      }
+      return { output: '' };
+    }
+
     // `neighbor <ip> route-map <map_name> <in|out>`
     if (cmd.match(/^neighbor\s+[\d\.]+\s+route-map/i) && parts.length >= 5) {
       const ip = parts[1];
@@ -657,14 +685,20 @@ function handleRouterCommand(
   }
 
   // Static Routing: `ip route <dest>/<prefix> <next_hop|Null0|blackhole>`
+  // Also handle: `ip route <dest> <netmask> <next_hop>`
   if (cmd.match(/^ip\s+route\s+/i) && parts.length >= 3) {
     let destCidr = parts[2];
     let nextHop = parts[3] || 'Null0';
+    let intfName: string | undefined;
 
     if (parts.length >= 5 && !destCidr.includes('/')) {
       const prefix = netmaskToPrefix(parts[3]);
       destCidr = `${parts[2]}/${prefix}`;
       nextHop = parts[4];
+      if (parts.length >= 6) intfName = parts[5];
+    } else if (parts.length >= 5 && destCidr.includes('/')) {
+      // ip route 10.0.0.0/24 192.168.1.1 eth0
+      if (parts[4] && !parts[4].match(/^\d/)) intfName = parts[4];
     }
 
     const parsed = parseIpv4Cidr(destCidr);
@@ -679,7 +713,8 @@ function handleRouterCommand(
       node.staticRoutes.push({
         destination: parsed.network,
         prefix: parsed.prefix,
-        nextHop: isBlackhole ? 'Null0' : nextHop
+        nextHop: isBlackhole ? 'Null0' : nextHop,
+        interfaceName: intfName
       });
       return { output: '' };
     }
@@ -858,26 +893,75 @@ function handleSwitchCommand(
     return { output: '' };
   }
 
-  // `ovs-vsctl set port <port> tag=<id>`
+  // `ovs-vsctl set port <port> tag=<id> | vlan_mode=trunk | trunks=10,20`
   if (cmd.match(/^ovs-vsctl\s+set\s+port/i)) {
     const portName = parts[3];
-    const tagArg = parts[4];
-    if (portName && tagArg && tagArg.startsWith('tag=')) {
-      const tag = parseInt(tagArg.replace('tag=', ''), 10);
-      if (!isNaN(tag)) {
-        const ok = setSwitchPortVlan(node, portName, tag);
-        if (ok) return { output: '', type: 'success' };
-        // If not found, auto-create port on the switch
+    const rest = parts.slice(4).join(' ');
+    if (portName) {
+      if (!node.interfaces[portName]) {
         node.interfaces[portName] = {
           name: portName,
           mac: `00:00:00:${Math.floor(Math.random() * 90 + 10)}:${Math.floor(Math.random() * 90 + 10)}:03`,
-          up: true,
-          vlanTag: tag
+          up: true
         };
+      }
+      if (rest.includes('vlan_mode=trunk')) {
+        setSwitchPortTrunk(node, portName);
+        return { output: '', type: 'success' };
+      }
+      if (rest.includes('vlan_mode=access')) {
+        node.interfaces[portName].vlanMode = 'access';
+        return { output: '', type: 'success' };
+      }
+      if (rest.includes('trunks=')) {
+        const trunksMatch = rest.match(/trunks=([0-9,]+)/);
+        if (trunksMatch) {
+          const trunkList = trunksMatch[1].split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
+          setSwitchPortTrunk(node, portName, trunkList);
+          return { output: '', type: 'success' };
+        }
+      }
+      const tagMatch = rest.match(/tag=(\d+)/);
+      if (tagMatch) {
+        const tag = parseInt(tagMatch[1], 10);
+        setSwitchPortVlan(node, portName, tag);
         return { output: '', type: 'success' };
       }
     }
     return { output: 'ovs-vsctl: invalid arguments for set port', type: 'error' };
+  }
+
+  // Cisco switch CLI style: `switchport mode trunk|access`, `switchport access vlan <id>`
+  if (cmd.match(/^switchport\s+mode\s+trunk/i)) {
+    const portName = node.selectedInterface || Object.keys(node.interfaces)[0];
+    if (portName && node.interfaces[portName]) {
+      setSwitchPortTrunk(node, portName);
+      return { output: `% Interface ${portName} mode set to trunk` };
+    }
+  }
+  if (cmd.match(/^switchport\s+mode\s+access/i)) {
+    const portName = node.selectedInterface || Object.keys(node.interfaces)[0];
+    if (portName && node.interfaces[portName]) {
+      node.interfaces[portName].vlanMode = 'access';
+      return { output: `% Interface ${portName} mode set to access` };
+    }
+  }
+  if (cmd.match(/^switchport\s+access\s+vlan\s+(\d+)/i)) {
+    const vlanId = parseInt(parts[parts.length - 1], 10);
+    const portName = node.selectedInterface || Object.keys(node.interfaces)[0];
+    if (portName && node.interfaces[portName]) {
+      setSwitchPortVlan(node, portName, vlanId);
+      return { output: `% Interface ${portName} assigned to VLAN ${vlanId}` };
+    }
+  }
+  if (cmd.match(/^switchport\s+trunk\s+allowed\s+vlan\s+/i)) {
+    const vlanListStr = parts[parts.length - 1];
+    const trunkList = vlanListStr.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
+    const portName = node.selectedInterface || Object.keys(node.interfaces)[0];
+    if (portName && node.interfaces[portName]) {
+      setSwitchPortTrunk(node, portName, trunkList);
+      return { output: `% Interface ${portName} trunk allowed VLANs: ${trunkList.join(',')}` };
+    }
   }
 
   // `ovs-vsctl remove port <port> tag` / `ovs-vsctl clear port <port> tag`
@@ -1011,22 +1095,49 @@ function handleHostCommand(
     return { output: `Cannot find device "${dev}"`, type: 'error' };
   }
 
-  // `ip route add default via <ip>`
-  if (cmd.match(/^ip\s+route\s+add\s+default\s+via/i)) {
-    node.defaultGateway = parts[4];
+  // `ip route add default via <ip>` [dev <intf>]
+  if (cmd.match(/^ip\s+route\s+add\s+default/i)) {
+    // parts: ['ip','route','add','default','via','<gateway_ip>', ...]
+    const viaIdx = parts.indexOf('via');
+    if (viaIdx !== -1 && parts[viaIdx + 1]) {
+      node.defaultGateway = parts[viaIdx + 1];
+    }
+    const devIdx = parts.indexOf('dev');
+    if (devIdx !== -1 && parts[devIdx + 1]) {
+      node.defaultGatewayDev = parts[devIdx + 1];
+    }
     return { output: '' };
   }
 
-  // `ip route add <dest>/<prefix> via <next_hop>` or `ip route add <dest>/<prefix> dev <intf>`
-  if (cmd.match(/^ip\s+route\s+add\s+[\d\.]+\/\d+/i)) {
-    const p = parseIpv4Cidr(parts[3]);
+  // `ip route add <dest>/<prefix> via <next_hop>` [dev <intf>] or `dev <intf>`
+  if (cmd.match(/^ip\s+route\s+add\s+[\d\.]+/i) && !cmd.includes('default')) {
+    let destCidr = parts[3];
     const viaIdx = parts.indexOf('via');
     const devIdx = parts.indexOf('dev');
     const nextHop = viaIdx !== -1 ? parts[viaIdx + 1] : devIdx !== -1 ? parts[devIdx + 1] : 'unknown';
+    const interfaceName = devIdx !== -1 ? parts[devIdx + 1] : undefined;
 
+    if (!destCidr.includes('/')) {
+      if (parts[4] && parts[4].match(/^\d+\.\d+\.\d+\.\d+$/) && parts[4] !== 'via' && parts[4] !== 'dev') {
+        const prefix = netmaskToPrefix(parts[4]);
+        destCidr = `${destCidr}/${prefix}`;
+      } else {
+        destCidr = `${destCidr}/24`;
+      }
+    }
+
+    const p = parseIpv4Cidr(destCidr);
     if (p) {
       node.staticRoutes = node.staticRoutes || [];
-      node.staticRoutes.push({ destination: p.network, prefix: p.prefix, nextHop });
+      node.staticRoutes = node.staticRoutes.filter(
+        s => !(s.destination === p.network && s.prefix === p.prefix)
+      );
+      node.staticRoutes.push({
+        destination: p.network,
+        prefix: p.prefix,
+        nextHop: nextHop !== 'unknown' ? nextHop : (interfaceName || '0.0.0.0'),
+        interfaceName
+      });
       return { output: '' };
     }
   }
@@ -1486,6 +1597,7 @@ function formatShowRunningConfig(node: NetworkNode): string {
       if (n.description) lines.push(` neighbor ${ip} description ${n.description}`);
       if (n.updateSource) lines.push(` neighbor ${ip} update-source ${n.updateSource}`);
       if (n.nextHopSelf) lines.push(` neighbor ${ip} next-hop-self`);
+      if (n.routeReflectorClient) lines.push(` neighbor ${ip} route-reflector-client`);
       if (n.routeMapIn) lines.push(` neighbor ${ip} route-map ${n.routeMapIn} in`);
       if (n.routeMapOut) lines.push(` neighbor ${ip} route-map ${n.routeMapOut} out`);
     }
@@ -1541,8 +1653,21 @@ function formatHostIpAddrShow(node: NetworkNode): string {
 
 function formatHostIpRouteShow(node: NetworkNode): string {
   const lines: string[] = [];
+  // Find the best dev for the default gateway
+  let defaultDev = node.defaultGatewayDev || Object.keys(node.interfaces)[0] || 'eth0';
   if (node.defaultGateway) {
-    lines.push(`default via ${node.defaultGateway} dev ${Object.keys(node.interfaces)[0] || 'eth0'}`);
+    if (!node.defaultGatewayDev) {
+      for (const [name, intf] of Object.entries(node.interfaces)) {
+        if (intf.ip && intf.up) {
+          const p = parseIpv4Cidr(intf.ip);
+          if (p && isIpv4InSubnet(node.defaultGateway, p.network, p.prefix)) {
+            defaultDev = name;
+            break;
+          }
+        }
+      }
+    }
+    lines.push(`default via ${node.defaultGateway} dev ${defaultDev}`);
   }
   for (const [name, intf] of Object.entries(node.interfaces)) {
     if (intf.ip && intf.up) {
@@ -1551,7 +1676,13 @@ function formatHostIpRouteShow(node: NetworkNode): string {
     }
   }
   for (const s of node.staticRoutes || []) {
-    lines.push(`${s.destination}/${s.prefix} via ${s.nextHop}`);
+    if (s.interfaceName && s.nextHop && s.nextHop !== s.interfaceName && s.nextHop !== '0.0.0.0') {
+      lines.push(`${s.destination}/${s.prefix} via ${s.nextHop} dev ${s.interfaceName}`);
+    } else if (s.interfaceName && (s.nextHop === s.interfaceName || s.nextHop === '0.0.0.0')) {
+      lines.push(`${s.destination}/${s.prefix} dev ${s.interfaceName} scope link`);
+    } else {
+      lines.push(`${s.destination}/${s.prefix} via ${s.nextHop}`);
+    }
   }
   return lines.join('\n') || '% No IPv4 routes in table';
 }

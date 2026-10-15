@@ -23,12 +23,15 @@ export default function Home() {
   const toggleTerminalCollapse = useNetworkStore(state => state.toggleTerminalCollapse);
   const activeTerminalNodeId = useNetworkStore(state => state.activeTerminalNodeId);
 
+  const restoreAutoSave = useNetworkStore(state => state.restoreAutoSave);
+
   const [mounted, setMounted] = useState(false);
   const [isResizing, setIsResizing] = useState<'sidebar' | 'terminal' | null>(null);
 
   useEffect(() => {
+    restoreAutoSave();
     setMounted(true);
-  }, []);
+  }, [restoreAutoSave]);
 
   // Drag-to-resize Sidebar (range: 240px to 450px)
   const startResizeSidebar = useCallback((e: React.MouseEvent) => {

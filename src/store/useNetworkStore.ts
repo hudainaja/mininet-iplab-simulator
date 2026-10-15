@@ -13,6 +13,54 @@ import {
   CustomLabPreset
 } from '../engine/dynamicLayoutEngine';
 
+// ----- localStorage Auto-Save Constants & Helpers -----
+const STORAGE_KEY = 'mininet-iplab-autosave';
+
+interface PersistedState {
+  currentPresetId: string;
+  currentPresetName: string;
+  nodes: Record<string, NetworkNode>;
+  links: NetworkLink[];
+  isDarkMode: boolean;
+}
+
+function saveToLocalStorage(state: PersistedState) {
+  try {
+    const json = JSON.stringify(state);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(STORAGE_KEY, json);
+    }
+  } catch {
+    // quota exceeded or SSR — silently ignore
+  }
+}
+
+function loadFromLocalStorage(): PersistedState | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedState;
+    // Basic validation: must have nodes and links
+    if (parsed && parsed.nodes && parsed.links && Object.keys(parsed.nodes).length > 0) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function clearLocalStorage() {
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 interface VerificationResult {
   test: string;
   source: string;
@@ -82,6 +130,7 @@ interface NetworkState {
   // Actions
   loadPreset: (presetId: string) => void;
   resetLab: () => void;
+  restoreAutoSave: () => boolean;
   selectNode: (nodeId: string | null) => void;
   openTerminal: (nodeId: string) => void;
   closeTerminalTab: (nodeId: string) => void;
@@ -215,11 +264,14 @@ function ensureInterfaceRegistered(node: NetworkNode, intfName: string) {
 
 const defaultPreset = createUtpExamPreset(true);
 
+// Attempt to restore from localStorage, fallback to default preset
+const restoredState = loadFromLocalStorage();
+
 export const useNetworkStore = create<NetworkState>((set, get) => ({
-  currentPresetId: defaultPreset.id,
-  currentPresetName: defaultPreset.name,
-  nodes: defaultPreset.nodes,
-  links: defaultPreset.links,
+  currentPresetId: restoredState?.currentPresetId ?? defaultPreset.id,
+  currentPresetName: restoredState?.currentPresetName ?? defaultPreset.name,
+  nodes: restoredState?.nodes ?? defaultPreset.nodes,
+  links: restoredState?.links ?? defaultPreset.links,
 
   selectedNodeId: 'r1',
   activeTerminalNodeId: 'r1',
@@ -233,7 +285,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
   sidebarWidth: 300,
   isTerminalCollapsed: false,
   terminalWidth: 480,
-  isDarkMode: false,
+  isDarkMode: restoredState?.isDarkMode ?? false,
 
   // Wiring Mode & Quick Connect
   isWiringMode: false,
@@ -364,8 +416,24 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
   },
 
   resetLab: () => {
+    clearLocalStorage();
     const { currentPresetId, loadPreset } = get();
     loadPreset(currentPresetId);
+  },
+
+  restoreAutoSave: () => {
+    const saved = loadFromLocalStorage();
+    if (saved) {
+      set({
+        currentPresetId: saved.currentPresetId,
+        currentPresetName: saved.currentPresetName,
+        nodes: saved.nodes,
+        links: saved.links,
+        isDarkMode: saved.isDarkMode,
+      });
+      return true;
+    }
+    return false;
   },
 
   selectNode: (nodeId: string | null) => {
@@ -962,3 +1030,18 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
     set({ verificationResults: results, isVerificationModalOpen: true });
   }
 }));
+
+// ----- Auto-Save Subscription (debounced 500ms) -----
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+useNetworkStore.subscribe((state) => {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    saveToLocalStorage({
+      currentPresetId: state.currentPresetId,
+      currentPresetName: state.currentPresetName,
+      nodes: state.nodes,
+      links: state.links,
+      isDarkMode: state.isDarkMode,
+    });
+  }, 500);
+});

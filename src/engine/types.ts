@@ -18,6 +18,8 @@ export interface InterfaceConfig {
   up: boolean;
   ospfCost?: number;   // default 10
   vlanTag?: number;    // Open vSwitch port tag e.g. 10
+  vlanMode?: 'access' | 'trunk';
+  vlanTrunks?: number[];
   description?: string;
   isTunnel?: boolean;
   tunnelConfig?: {
@@ -48,6 +50,7 @@ export interface BgpNeighbor {
   remoteAs: number;
   updateSource?: string;
   nextHopSelf?: boolean;
+  routeReflectorClient?: boolean;
   routeMapIn?: string;
   routeMapOut?: string;
   description?: string;
@@ -150,6 +153,7 @@ export interface NetworkNode {
   // IPv6 & Tunnels
   ipv6Routes: Array<{ destination: string; prefix: number; nextHop?: string; interfaceName?: string }>;
   defaultGateway?: string;
+  defaultGatewayDev?: string;
   defaultGatewayV6?: string;
   tunnels?: Array<{ name: string; localIp: string; remoteIp: string; ttl: number }>;
 

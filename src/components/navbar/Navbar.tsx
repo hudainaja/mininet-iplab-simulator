@@ -176,13 +176,27 @@ export const Navbar: React.FC = () => {
           <span className="hidden sm:inline">Guide</span>
         </button>
 
-        {/* Reset Lab Button */}
+        {/* Auto-Save Indicator */}
+        <span
+          className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-[11px] font-medium rounded-md border border-emerald-200 dark:border-emerald-800/50 select-none"
+          title="Auto-Save aktif: Perubahan posisi topologi, IP, dan routing otomatis tersimpan di browser (localStorage)"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Auto-Saved
+        </span>
+
+        {/* Reset Lab Button (Clears localStorage auto-save) */}
         <button
-          onClick={resetLab}
-          className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
-          title="Reset topologi ke kondisi awal"
+          onClick={() => {
+            if (window.confirm('Reset Lab?\nSemua konfigurasi IP, routing, dan posisi node akan dihapus.\nState tersimpan di localStorage juga akan dihapus.')) {
+              resetLab();
+            }
+          }}
+          className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+          title="Reset Lab — Hapus semua konfigurasi dan kembalikan topologi ke kondisi awal (termasuk auto-save)"
         >
           <RotateCcw className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Reset Lab</span>
         </button>
 
         {/* Dark Mode Toggle Button */}

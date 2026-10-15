@@ -1,5 +1,6 @@
 import { NetworkNode, NetworkLink, OspfNeighbor, RouteEntry } from './types';
 import { parseIpv4Cidr, isIpv4InSubnet, getNetworkAddress } from './ipUtils';
+import { canSwitchForward } from './vlanEngine';
 
 export function getRouterId(node: NetworkNode): string {
   if (node.ospfRouterId) return node.ospfRouterId;
@@ -65,10 +66,7 @@ export function findConnectedPeers(
     if (!peerNode) continue;
 
     if (peerNode.type === 'switch') {
-      // Traverse switch respecting VLAN tags
-      const switchPort = peerNode.interfaces[peerIntfName];
-      const incomingVlan = switchPort?.vlanTag || 1; // default VLAN 1
-
+      // Traverse switch respecting VLAN tags and trunk modes
       for (const switchLink of links) {
         if (switchLink.status === 'down') continue;
         let otherNodeId = '';
@@ -86,10 +84,8 @@ export function findConnectedPeers(
         }
 
         if (otherNodeId && otherNodeId !== nodeId) {
-          const outPort = peerNode.interfaces[otherSwitchPort];
-          const outVlan = outPort?.vlanTag || 1;
-          // Must match VLAN or trunk
-          if (incomingVlan === outVlan) {
+          // Check if switch can forward between incoming port and outgoing port
+          if (canSwitchForward(peerNode, peerIntfName, otherSwitchPort)) {
             directPeers.push({ targetNodeId: otherNodeId, targetIntfName: otherIntfName });
           }
         }

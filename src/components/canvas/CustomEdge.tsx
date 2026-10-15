@@ -12,6 +12,16 @@ interface CustomEdgeData {
   status?: 'up' | 'down';
 }
 
+// Strip node name prefix from interface name for compact display
+// e.g. "r1-eth0" → "eth0", "s1-eth2" → "eth2", "lo" → "lo"
+function shortIntfName(fullName: string): string {
+  const dashIdx = fullName.indexOf('-');
+  if (dashIdx !== -1) {
+    return fullName.substring(dashIdx + 1);
+  }
+  return fullName;
+}
+
 export const CustomEdge: React.FC<EdgeProps> = ({
   id,
   sourceX,
@@ -37,6 +47,30 @@ export const CustomEdge: React.FC<EdgeProps> = ({
   const isUp = edgeData.status !== 'down';
   const sourceHandle = edgeData.sourceHandle || 'eth1';
   const targetHandle = edgeData.targetHandle || 'eth1';
+
+  // Calculate positions near each endpoint for the interface labels
+  const dx = targetX - sourceX;
+  const dy = targetY - sourceY;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const ux = dx / dist;
+  const uy = dy / dist;
+  // Perpendicular vector for slight offset so labels do not sit directly on the cable
+  const px = -uy;
+  const py = ux;
+
+  // Offset distance along the wire from source and target node centers
+  // Router nodes have radius ~28px; placing label at 48px ensures clear visibility outside node
+  const dOffset = Math.min(dist * 0.35, Math.max(46, dist * 0.22));
+  const pOffset = 11;
+
+  const srcLabelX = sourceX + ux * dOffset + px * pOffset;
+  const srcLabelY = sourceY + uy * dOffset + py * pOffset;
+  const tgtLabelX = targetX - ux * dOffset + px * pOffset;
+  const tgtLabelY = targetY - uy * dOffset + py * pOffset;
+
+  const labelBadgeClass = isDarkMode
+    ? 'bg-slate-900/90 text-sky-300 border-slate-700/80 shadow-sm shadow-black/30'
+    : 'bg-white/95 text-blue-700 border-slate-300 shadow-xs';
 
   return (
     <>
@@ -66,8 +100,40 @@ export const CustomEdge: React.FC<EdgeProps> = ({
         }}
       />
 
-      {/* Edge interface mapping label and quick disconnect on hover */}
       <EdgeLabelRenderer>
+        {/* Always-visible interface label near SOURCE endpoint */}
+        <div
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${srcLabelX}px,${srcLabelY}px)`,
+            pointerEvents: 'none',
+          }}
+          className="z-20"
+        >
+          <span
+            className={`text-[9px] font-mono font-semibold px-1 py-0.5 rounded border shadow-xs select-none backdrop-blur-xs ${labelBadgeClass}`}
+          >
+            {shortIntfName(sourceHandle)}
+          </span>
+        </div>
+
+        {/* Always-visible interface label near TARGET endpoint */}
+        <div
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${tgtLabelX}px,${tgtLabelY}px)`,
+            pointerEvents: 'none',
+          }}
+          className="z-20"
+        >
+          <span
+            className={`text-[9px] font-mono font-semibold px-1 py-0.5 rounded border shadow-xs select-none backdrop-blur-xs ${labelBadgeClass}`}
+          >
+            {shortIntfName(targetHandle)}
+          </span>
+        </div>
+
+        {/* Center label: dot or hover panel */}
         <div
           style={{
             position: 'absolute',
