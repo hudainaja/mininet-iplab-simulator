@@ -89,7 +89,7 @@ export const NetworkCanvas: React.FC = () => {
   }, []);
 
   // Commit final position to zustand store when drag ends
-  const onNodeDragStop = useCallback((_: React.MouseEvent | React.TouchEvent, node: Node) => {
+  const onNodeDragStop = useCallback((_: MouseEvent | TouchEvent, node: Node) => {
     updateNodePosition(node.id, {
       x: Math.round(node.position.x),
       y: Math.round(node.position.y),
